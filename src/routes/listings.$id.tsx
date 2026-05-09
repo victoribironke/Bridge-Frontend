@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { getListingDetail, formatNairaFull, formatNaira } from "@/lib/mock-data";
 import { useMockAuth } from "@/lib/mock-auth";
+import { PAGES } from "@/lib/constants";
 
 const ListingDetailPage = () => {
   const { id } = Route.useParams();
@@ -20,7 +21,7 @@ const ListingDetailPage = () => {
 
   const handleInvest = () => {
     if (role !== "investor") {
-      navigate({ to: "/register/investor" });
+      navigate({ to: PAGES.REGISTER_INVESTOR });
       return;
     }
     setShowConfirm(true);
@@ -29,7 +30,7 @@ const ListingDetailPage = () => {
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
       <Link
-        to="/dashboard/investor"
+        to={PAGES.DASHBOARD_INVESTOR}
         className="text-sm text-muted-foreground hover:text-foreground"
       >
         ← Back to listings
