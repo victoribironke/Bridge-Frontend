@@ -8,12 +8,7 @@ import {
   formatNairaFull,
 } from "@/lib/mock-data";
 
-export const Route = createFileRoute("/dashboard/business/payments")({
-  head: () => ({ meta: [{ title: "Payments — Bridge" }] }),
-  component: Payments,
-});
-
-function Payments() {
+const Payments = () => {
   const link = businessProfile.paymentLink;
   const qr = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(link)}`;
   const [copied, setCopied] = useState(false);
@@ -130,13 +125,18 @@ function Payments() {
       </section>
     </div>
   );
-}
+};
 
-function Stat({ label, value }: { label: string; value: string }) {
+const Stat = ({ label, value }: { label: string; value: string }) => {
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="font-display text-2xl">{value}</div>
       <div className="mt-1 text-xs text-muted-foreground">{label}</div>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/dashboard/business/payments")({
+  head: () => ({ meta: [{ title: "Payments — Bridge" }] }),
+  component: Payments,
+});
