@@ -11,7 +11,7 @@ import {
 import appCss from "../styles.css?url";
 import { MockAuthProvider, useMockAuth, type AuthRole } from "@/lib/mock-auth";
 
-function NotFoundComponent() {
+const NotFoundComponent = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
@@ -31,9 +31,9 @@ function NotFoundComponent() {
       </div>
     </div>
   );
-}
+};
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+const ErrorComponent = ({ error, reset }: { error: Error; reset: () => void }) => {
   console.error(error);
   const router = useRouter();
   return (
@@ -63,41 +63,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
       </div>
     </div>
   );
-}
+};
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Bridge — Capital that meets businesses where they are" },
-      {
-        name: "description",
-        content:
-          "Bridge connects everyday Nigerian investors with vetted small businesses through revenue-share deals.",
-      },
-    ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      {
-        rel: "preconnect",
-        href: "https://fonts.gstatic.com",
-        crossOrigin: "anonymous",
-      },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap",
-      },
-    ],
-  }),
-  shellComponent: RootShell,
-  component: RootComponent,
-  notFoundComponent: NotFoundComponent,
-  errorComponent: ErrorComponent,
-});
-
-function RootShell({ children }: { children: React.ReactNode }) {
+const RootShell = ({ children }: { children: React.ReactNode }) => {
   return (
     <html lang="en">
       <head>
@@ -109,9 +77,9 @@ function RootShell({ children }: { children: React.ReactNode }) {
       </body>
     </html>
   );
-}
+};
 
-function RootComponent() {
+const RootComponent = () => {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
@@ -120,9 +88,9 @@ function RootComponent() {
       </MockAuthProvider>
     </QueryClientProvider>
   );
-}
+};
 
-function SiteChrome() {
+const SiteChrome = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -132,9 +100,9 @@ function SiteChrome() {
       <Footer />
     </div>
   );
-}
+};
 
-function Header() {
+const Header = () => {
   const { role, setRole } = useMockAuth();
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
@@ -204,9 +172,9 @@ function Header() {
       </div>
     </header>
   );
-}
+};
 
-function RoleSwitch({ value, onChange }: { value: AuthRole; onChange: (r: AuthRole) => void }) {
+const RoleSwitch = ({ value, onChange }: { value: AuthRole; onChange: (r: AuthRole) => void }) => {
   const opts: { value: AuthRole; label: string }[] = [
     { value: "guest", label: "Guest" },
     { value: "investor", label: "Investor" },
@@ -231,9 +199,9 @@ function RoleSwitch({ value, onChange }: { value: AuthRole; onChange: (r: AuthRo
       ))}
     </div>
   );
-}
+};
 
-function Footer() {
+const Footer = () => {
   return (
     <footer className="border-t border-border bg-background">
       <div className="mx-auto max-w-7xl px-6 py-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between text-sm text-muted-foreground">
@@ -254,4 +222,36 @@ function Footer() {
       </div>
     </footer>
   );
-}
+};
+
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  head: () => ({
+    meta: [
+      { charSet: "utf-8" },
+      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { title: "Bridge — Capital that meets businesses where they are" },
+      {
+        name: "description",
+        content:
+          "Bridge connects everyday Nigerian investors with vetted small businesses through revenue-share deals.",
+      },
+    ],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      {
+        rel: "preconnect",
+        href: "https://fonts.gstatic.com",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap",
+      },
+    ],
+  }),
+  shellComponent: RootShell,
+  component: RootComponent,
+  notFoundComponent: NotFoundComponent,
+  errorComponent: ErrorComponent,
+});
