@@ -19,14 +19,9 @@ import {
 } from "@/lib/mock-data";
 import { useMockAuth } from "@/lib/mock-auth";
 
-export const Route = createFileRoute("/register/business")({
-  head: () => ({ meta: [{ title: "Register your business — Bridge" }] }),
-  component: BusinessRegister,
-});
-
 const STEPS = ["Personal", "BVN", "Business", "Bank", "Done"];
 
-function BusinessRegister() {
+const BusinessRegister = () => {
   const [step, setStep] = useState(0);
   const navigate = useNavigate();
   const { setRole } = useMockAuth();
@@ -322,4 +317,9 @@ function BusinessRegister() {
       </div>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/register/business")({
+  head: () => ({ meta: [{ title: "Register your business — Bridge" }] }),
+  component: BusinessRegister,
+});
