@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 
-export function Stepper({ steps, current }: { steps: string[]; current: number }) {
+export const Stepper = ({ steps, current }: { steps: string[]; current: number }) => {
   return (
     <ol className="flex items-center gap-2">
       {steps.map((s, i) => {
@@ -33,9 +33,9 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
       })}
     </ol>
   );
-}
+};
 
-export function FormShell({
+export const FormShell = ({
   title,
   subtitle,
   children,
@@ -45,7 +45,7 @@ export function FormShell({
   subtitle?: string;
   children: ReactNode;
   footer?: ReactNode;
-}) {
+}) => {
   return (
     <div className="rounded-2xl border border-border bg-card p-8">
       <h2 className="font-display text-2xl">{title}</h2>
@@ -54,9 +54,9 @@ export function FormShell({
       {footer && <div className="mt-8 flex justify-between gap-3">{footer}</div>}
     </div>
   );
-}
+};
 
-export function Field({
+export const Field = ({
   label,
   hint,
   children,
@@ -64,7 +64,7 @@ export function Field({
   label: string;
   hint?: string;
   children: ReactNode;
-}) {
+}) => {
   return (
     <label className="block">
       <span className="text-sm font-medium">{label}</span>
@@ -72,9 +72,9 @@ export function Field({
       {hint && <span className="mt-1 block text-xs text-muted-foreground">{hint}</span>}
     </label>
   );
-}
+};
 
-export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+export const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => {
   return (
     <input
       {...props}
@@ -84,9 +84,9 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
       }
     />
   );
-}
+};
 
-export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export const Textarea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => {
   return (
     <textarea
       {...props}
@@ -96,9 +96,9 @@ export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
       }
     />
   );
-}
+};
 
-export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+export const Select = (props: React.SelectHTMLAttributes<HTMLSelectElement>) => {
   return (
     <select
       {...props}
@@ -108,9 +108,12 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
       }
     />
   );
-}
+};
 
-export function PrimaryBtn({ children, ...rest }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+export const PrimaryBtn = ({
+  children,
+  ...rest
+}: React.ButtonHTMLAttributes<HTMLButtonElement>) => {
   return (
     <button
       {...rest}
@@ -122,9 +125,9 @@ export function PrimaryBtn({ children, ...rest }: React.ButtonHTMLAttributes<HTM
       {children}
     </button>
   );
-}
+};
 
-export function GhostBtn({ children, ...rest }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+export const GhostBtn = ({ children, ...rest }: React.ButtonHTMLAttributes<HTMLButtonElement>) => {
   return (
     <button
       {...rest}
@@ -136,4 +139,4 @@ export function GhostBtn({ children, ...rest }: React.ButtonHTMLAttributes<HTMLB
       {children}
     </button>
   );
-}
+};
