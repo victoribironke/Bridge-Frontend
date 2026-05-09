@@ -1,26 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { listingCards, platformStats, formatNaira } from "@/lib/mock-data";
 
-export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Bridge — Capital that meets businesses where they are" },
-      {
-        name: "description",
-        content:
-          "Bridge connects everyday Nigerian investors with vetted small businesses through transparent revenue-share deals.",
-      },
-      { property: "og:title", content: "Bridge" },
-      {
-        property: "og:description",
-        content: "Capital that meets businesses where they are.",
-      },
-    ],
-  }),
-  component: Index,
-});
-
-function Index() {
+const Index = () => {
   return (
     <>
       <Hero />
@@ -29,9 +10,9 @@ function Index() {
       <FeaturedListings />
     </>
   );
-}
+};
 
-function Hero() {
+const Hero = () => {
   return (
     <section className="relative overflow-hidden bg-grain">
       <div className="mx-auto max-w-6xl px-6 pt-20 pb-24 md:pt-28 md:pb-32">
@@ -66,9 +47,9 @@ function Hero() {
       </div>
     </section>
   );
-}
+};
 
-function Stats() {
+const Stats = () => {
   const items = [
     {
       label: "Businesses funded",
@@ -87,6 +68,7 @@ function Stats() {
       value: `${platformStats.averageRepaymentMonths} months`,
     },
   ];
+
   return (
     <section className="border-y border-border bg-card">
       <div className="mx-auto grid max-w-6xl grid-cols-2 gap-px bg-border md:grid-cols-4">
@@ -99,9 +81,9 @@ function Stats() {
       </div>
     </section>
   );
-}
+};
 
-function HowItWorks() {
+const HowItWorks = () => {
   const investors = [
     ["Set your preferences", "Pick the sectors, risk tier and timeline that suit you."],
     ["Back vetted listings", "Each listing is rated, narrated and structured into tranches."],
@@ -112,6 +94,7 @@ function HowItWorks() {
     ["Publish a listing", "Capital, terms and AI profile are generated for you."],
     ["Sell as usual", "Customers pay your link. The platform handles the sweep."],
   ];
+
   return (
     <section className="mx-auto max-w-6xl px-6 py-24">
       <h2 className="font-display text-4xl md:text-5xl">How Bridge works</h2>
@@ -140,10 +123,11 @@ function HowItWorks() {
       </div>
     </section>
   );
-}
+};
 
-function FeaturedListings() {
+const FeaturedListings = () => {
   const featured = listingCards.slice(0, 3);
+
   return (
     <section className="border-t border-border bg-secondary/40">
       <div className="mx-auto max-w-6xl px-6 py-24">
@@ -186,4 +170,23 @@ function FeaturedListings() {
       </div>
     </section>
   );
-}
+};
+
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Bridge — Capital that meets businesses where they are" },
+      {
+        name: "description",
+        content:
+          "Bridge connects everyday Nigerian investors with vetted small businesses through transparent revenue-share deals.",
+      },
+      { property: "og:title", content: "Bridge" },
+      {
+        property: "og:description",
+        content: "Capital that meets businesses where they are.",
+      },
+    ],
+  }),
+  component: Index,
+});
