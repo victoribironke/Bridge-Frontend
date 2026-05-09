@@ -8,12 +8,7 @@ import {
   formatNairaFull,
 } from "@/lib/mock-data";
 
-export const Route = createFileRoute("/dashboard/business/")({
-  head: () => ({ meta: [{ title: "Business dashboard — Bridge" }] }),
-  component: BusinessDashboard,
-});
-
-function BusinessDashboard() {
+const BusinessDashboard = () => {
   const r = businessProfile.rating;
   const ratingPct = Math.round(((r.score - r.rangeMin) / (r.rangeMax - r.rangeMin)) * 100);
   const fundedPct = Math.round(
@@ -119,13 +114,18 @@ function BusinessDashboard() {
       </section>
     </div>
   );
-}
+};
 
-function Stat({ label, value }: { label: string; value: string }) {
+const Stat = ({ label, value }: { label: string; value: string }) => {
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="font-display text-2xl">{value}</div>
       <div className="mt-1 text-xs text-muted-foreground">{label}</div>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/dashboard/business/")({
+  head: () => ({ meta: [{ title: "Business dashboard — Bridge" }] }),
+  component: BusinessDashboard,
+});
