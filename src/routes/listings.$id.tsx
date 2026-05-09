@@ -3,20 +3,7 @@ import { useMemo, useState } from "react";
 import { getListingDetail, formatNairaFull, formatNaira } from "@/lib/mock-data";
 import { useMockAuth } from "@/lib/mock-auth";
 
-export const Route = createFileRoute("/listings/$id")({
-  head: ({ params }) => ({
-    meta: [
-      { title: `Listing — Bridge` },
-      {
-        name: "description",
-        content: `Listing detail on Bridge for ${params.id}.`,
-      },
-    ],
-  }),
-  component: ListingDetailPage,
-});
-
-function ListingDetailPage() {
+const ListingDetailPage = () => {
   const { id } = Route.useParams();
   const listing = getListingDetail(id);
   const { role, setRole } = useMockAuth();
@@ -269,22 +256,35 @@ function ListingDetailPage() {
       )}
     </div>
   );
-}
+};
 
-function Term({ label, value }: { label: string; value: string }) {
+const Term = ({ label, value }: { label: string; value: string }) => {
   return (
     <div>
       <dt className="text-xs uppercase tracking-wider text-muted-foreground">{label}</dt>
       <dd className="mt-1 font-medium">{value}</dd>
     </div>
   );
-}
+};
 
-function Row({ label, value }: { label: string; value: string }) {
+const Row = ({ label, value }: { label: string; value: string }) => {
   return (
     <div className="flex items-center justify-between">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium">{value}</span>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/listings/$id")({
+  head: ({ params }) => ({
+    meta: [
+      { title: `Listing — Bridge` },
+      {
+        name: "description",
+        content: `Listing detail on Bridge for ${params.id}.`,
+      },
+    ],
+  }),
+  component: ListingDetailPage,
+});
