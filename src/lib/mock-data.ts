@@ -243,7 +243,7 @@ export const listingDetails: Record<string, ListingDetail> = {
 };
 
 // Provide a default detail fallback for other ids
-export function getListingDetail(id: string): ListingDetail {
+export const getListingDetail = (id: string): ListingDetail => {
   if (listingDetails[id]) return listingDetails[id];
   const card = listingCards.find((c) => c.id === id) ?? listingCards[0];
   return {
@@ -320,7 +320,7 @@ export function getListingDetail(id: string): ListingDetail {
       ],
     },
   };
-}
+};
 
 // Investor mocks
 export const investorSummary = {
@@ -706,15 +706,15 @@ export const businessNotifications: Notification[] = [
 ];
 
 // Mock APIs
-export function mockBvnVerify(): Promise<{ name: string }> {
+export const mockBvnVerify = (): Promise<{ name: string }> => {
   return new Promise((resolve) => setTimeout(() => resolve({ name: "Adebayo Okonkwo" }), 1500));
-}
+};
 
-export function mockBankConnect(): Promise<{
+export const mockBankConnect = (): Promise<{
   accountName: string;
   range: string;
   averageInflow: number;
-}> {
+}> => {
   return new Promise((resolve) =>
     setTimeout(
       () =>
@@ -726,13 +726,13 @@ export function mockBankConnect(): Promise<{
       1500,
     ),
   );
-}
+};
 
-export function mockSquadAccount(): string {
+export const mockSquadAccount = (): string => {
   return "8842910554";
-}
+};
 
-export function calculateDealTerms(capital: number) {
+export const calculateDealTerms = (capital: number) => {
   const revenueSharePct = Math.min(15, Math.max(7, Math.round((capital / 500_000) * 1.2)));
   const totalReturnPct = revenueSharePct + 6;
   const totalReturnNaira = Math.round(capital * (totalReturnPct / 100)) + capital;
@@ -762,15 +762,15 @@ export function calculateDealTerms(capital: number) {
       },
     ],
   };
-}
+};
 
-export function formatNaira(n: number): string {
+export const formatNaira = (n: number): string => {
   if (n >= 1_000_000_000) return `₦${(n / 1_000_000_000).toFixed(2)}B`;
   if (n >= 1_000_000) return `₦${(n / 1_000_000).toFixed(2)}M`;
   if (n >= 1_000) return `₦${(n / 1_000).toFixed(0)}K`;
   return `₦${n.toLocaleString()}`;
-}
+};
 
-export function formatNairaFull(n: number): string {
+export const formatNairaFull = (n: number): string => {
   return `₦${n.toLocaleString()}`;
-}
+};
