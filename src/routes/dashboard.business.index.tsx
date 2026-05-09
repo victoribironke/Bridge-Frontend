@@ -7,6 +7,7 @@ import {
   formatNaira,
   formatNairaFull,
 } from "@/lib/mock-data";
+import { PAGES } from "@/lib/constants";
 
 const BusinessDashboard = () => {
   const r = businessProfile.rating;
@@ -19,7 +20,10 @@ const BusinessDashboard = () => {
     <div className="mx-auto max-w-5xl px-6 py-10">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-3xl">{businessProfile.name}</h1>
-        <Link to="/dashboard/business/payments" className="text-sm text-primary hover:underline">
+        <Link
+          to={PAGES.DASHBOARD_BUSINESS_PAYMENTS}
+          className="text-sm text-primary hover:underline"
+        >
           Payment link →
         </Link>
       </div>
@@ -51,7 +55,7 @@ const BusinessDashboard = () => {
         <div className="flex items-center justify-between">
           <h2 className="font-display text-xl">Active listing</h2>
           <Link
-            to="/listings/$id"
+            to={PAGES.LISTINGS_ID}
             params={{ id: businessActiveListing.id }}
             className="text-sm text-primary hover:underline"
           >
