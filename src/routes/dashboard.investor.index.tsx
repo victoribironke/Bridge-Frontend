@@ -8,6 +8,7 @@ import {
   SECTORS,
   type ListingCard,
 } from "@/lib/mock-data";
+import { PAGES } from "@/lib/constants";
 
 const InvestorDashboard = () => {
   const [tab, setTab] = useState<"foryou" | "all">("foryou");
@@ -41,7 +42,7 @@ const InvestorDashboard = () => {
       <section className="mt-6 rounded-2xl border border-border bg-card p-6">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-xl">Recent activity</h2>
-          <Link to="/notifications" className="text-sm text-primary hover:underline">
+          <Link to={PAGES.NOTIFICATIONS} className="text-sm text-primary hover:underline">
             All notifications →
           </Link>
         </div>
@@ -61,7 +62,10 @@ const InvestorDashboard = () => {
       <section className="mt-10">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-2xl">Listings</h2>
-          <Link to="/dashboard/investor/portfolio" className="text-sm text-primary hover:underline">
+          <Link
+            to={PAGES.DASHBOARD_INVESTOR_PORTFOLIO}
+            className="text-sm text-primary hover:underline"
+          >
             My portfolio →
           </Link>
         </div>
@@ -97,7 +101,7 @@ const ForYou = () => {
       <div className="mt-6 rounded-2xl border border-dashed border-border p-10 text-center">
         <p className="text-muted-foreground">
           No matches yet.{" "}
-          <Link to="/register/investor" className="text-primary hover:underline">
+          <Link to={PAGES.REGISTER_INVESTOR} className="text-primary hover:underline">
             Set your preferences
           </Link>{" "}
           to see tailored deals.
@@ -265,7 +269,7 @@ const Tag = ({ label, onRemove }: { label: string; onRemove: () => void }) => {
 const Card = ({ l }: { l: ListingCard }) => {
   return (
     <Link
-      to="/listings/$id"
+      to={PAGES.LISTINGS_ID}
       params={{ id: l.id }}
       className="group flex flex-col rounded-2xl border border-border bg-card p-5 hover:border-primary/40 hover:shadow-lg"
     >
