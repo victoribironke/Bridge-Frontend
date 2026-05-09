@@ -9,12 +9,7 @@ import {
   type ListingCard,
 } from "@/lib/mock-data";
 
-export const Route = createFileRoute("/dashboard/investor/")({
-  head: () => ({ meta: [{ title: "Investor dashboard — Bridge" }] }),
-  component: InvestorDashboard,
-});
-
-function InvestorDashboard() {
+const InvestorDashboard = () => {
   const [tab, setTab] = useState<"foryou" | "all">("foryou");
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
@@ -92,9 +87,9 @@ function InvestorDashboard() {
       </section>
     </div>
   );
-}
+};
 
-function ForYou() {
+const ForYou = () => {
   // Mocked matched ranking: top 3 from cards
   const matched = listingCards.slice(0, 4);
   if (matched.length === 0) {
@@ -117,9 +112,9 @@ function ForYou() {
       ))}
     </div>
   );
-}
+};
 
-function AllListings() {
+const AllListings = () => {
   const [sector, setSector] = useState<string[]>([]);
   const [tier, setTier] = useState<string>("");
   const [standing, setStanding] = useState<string[]>([]);
@@ -254,9 +249,9 @@ function AllListings() {
       )}
     </div>
   );
-}
+};
 
-function Tag({ label, onRemove }: { label: string; onRemove: () => void }) {
+const Tag = ({ label, onRemove }: { label: string; onRemove: () => void }) => {
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs">
       {label}
@@ -265,9 +260,9 @@ function Tag({ label, onRemove }: { label: string; onRemove: () => void }) {
       </button>
     </span>
   );
-}
+};
 
-function Card({ l }: { l: ListingCard }) {
+const Card = ({ l }: { l: ListingCard }) => {
   return (
     <Link
       to="/listings/$id"
@@ -290,13 +285,18 @@ function Card({ l }: { l: ListingCard }) {
       </div>
     </Link>
   );
-}
+};
 
-function Stat({ label, value }: { label: string; value: string }) {
+const Stat = ({ label, value }: { label: string; value: string }) => {
   return (
     <div>
       <div className="text-muted-foreground">{label}</div>
       <div className="font-medium">{value}</div>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/dashboard/investor/")({
+  head: () => ({ meta: [{ title: "Investor dashboard — Bridge" }] }),
+  component: InvestorDashboard,
+});
