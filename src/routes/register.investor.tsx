@@ -12,11 +12,6 @@ import {
 import { mockBvnVerify, mockSquadAccount, SECTORS } from "@/lib/mock-data";
 import { useMockAuth } from "@/lib/mock-auth";
 
-export const Route = createFileRoute("/register/investor")({
-  head: () => ({ meta: [{ title: "Register as an investor — Bridge" }] }),
-  component: InvestorRegister,
-});
-
 const STEPS = ["Personal", "BVN", "Preferences", "Done"];
 
 const RISK = [
@@ -43,7 +38,7 @@ const TIMELINES = [
   { id: "flex", label: "Flexible", desc: "Any timeline" },
 ];
 
-function InvestorRegister() {
+const InvestorRegister = () => {
   const [step, setStep] = useState(0);
   const navigate = useNavigate();
   const { setRole } = useMockAuth();
@@ -282,4 +277,9 @@ function InvestorRegister() {
       </div>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/register/investor")({
+  head: () => ({ meta: [{ title: "Register as an investor — Bridge" }] }),
+  component: InvestorRegister,
+});
