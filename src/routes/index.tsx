@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { listingCards, platformStats, formatNaira } from "@/lib/mock-data";
+import { PAGES } from "@/lib/constants";
 
 const Index = () => {
   return (
@@ -31,13 +32,13 @@ const Hero = () => {
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
             <Link
-              to="/register/investor"
+              to={PAGES.REGISTER_INVESTOR}
               className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-base font-medium text-primary-foreground hover:bg-primary/90"
             >
               I want to invest
             </Link>
             <Link
-              to="/register/business"
+              to={PAGES.REGISTER_BUSINESS}
               className="inline-flex items-center justify-center rounded-md border border-primary px-6 py-3 text-base font-medium text-primary hover:bg-primary/5"
             >
               I need capital
@@ -133,7 +134,7 @@ const FeaturedListings = () => {
       <div className="mx-auto max-w-6xl px-6 py-24">
         <div className="flex items-end justify-between">
           <h2 className="font-display text-4xl md:text-5xl">Open right now</h2>
-          <Link to="/dashboard/investor" className="text-sm text-primary hover:underline">
+          <Link to={PAGES.DASHBOARD_INVESTOR} className="text-sm text-primary hover:underline">
             See all listings →
           </Link>
         </div>
@@ -141,7 +142,7 @@ const FeaturedListings = () => {
           {featured.map((l) => (
             <Link
               key={l.id}
-              to="/listings/$id"
+              to={PAGES.LISTINGS_ID}
               params={{ id: l.id }}
               className="group flex flex-col rounded-2xl border border-border bg-card p-6 transition-all hover:border-primary/40 hover:shadow-lg"
             >
