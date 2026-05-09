@@ -2,12 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { investorDeals, investorWallet, formatNaira, formatNairaFull } from "@/lib/mock-data";
 
-export const Route = createFileRoute("/dashboard/investor/portfolio")({
-  head: () => ({ meta: [{ title: "Portfolio — Bridge" }] }),
-  component: Portfolio,
-});
-
-function Portfolio() {
+const Portfolio = () => {
   const [tab, setTab] = useState<"active" | "completed" | "defaulted">("active");
   const [withdraw, setWithdraw] = useState(false);
 
@@ -141,9 +136,9 @@ function Portfolio() {
       )}
     </div>
   );
-}
+};
 
-function ActiveCard({ d }: { d: (typeof investorDeals.active)[number] }) {
+const ActiveCard = ({ d }: { d: (typeof investorDeals.active)[number] }) => {
   const [open, setOpen] = useState(false);
   const pct = Math.round((d.received / d.totalReturn) * 100);
   return (
@@ -208,22 +203,27 @@ function ActiveCard({ d }: { d: (typeof investorDeals.active)[number] }) {
       )}
     </div>
   );
-}
+};
 
-function Stat({ label, value }: { label: string; value: string }) {
+const Stat = ({ label, value }: { label: string; value: string }) => {
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="font-display text-2xl">{value}</div>
       <div className="mt-1 text-xs text-muted-foreground">{label}</div>
     </div>
   );
-}
+};
 
-function Mini({ label, value }: { label: string; value: string }) {
+const Mini = ({ label, value }: { label: string; value: string }) => {
   return (
     <div>
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="font-medium">{value}</div>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/dashboard/investor/portfolio")({
+  head: () => ({ meta: [{ title: "Portfolio — Bridge" }] }),
+  component: Portfolio,
+});
