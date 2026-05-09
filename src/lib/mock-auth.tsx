@@ -11,7 +11,7 @@ const Ctx = createContext<AuthCtx>({ role: "guest", setRole: () => {} });
 
 const KEY = "bridge.mockAuth";
 
-export function MockAuthProvider({ children }: { children: ReactNode }) {
+export const MockAuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRoleState] = useState<AuthRole>("guest");
 
   useEffect(() => {
@@ -28,8 +28,6 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
   };
 
   return <Ctx.Provider value={{ role, setRole }}>{children}</Ctx.Provider>;
-}
+};
 
-export function useMockAuth() {
-  return useContext(Ctx);
-}
+export const useMockAuth = () => useContext(Ctx);
