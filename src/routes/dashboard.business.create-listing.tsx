@@ -17,11 +17,6 @@ import {
   formatNairaFull,
 } from "@/lib/mock-data";
 
-export const Route = createFileRoute("/dashboard/business/create-listing")({
-  head: () => ({ meta: [{ title: "Create a listing — Bridge" }] }),
-  component: CreateListing,
-});
-
 const STEPS = ["Raise", "Terms", "References"];
 
 const TIER_LIMIT: Record<string, number> = {
@@ -30,7 +25,7 @@ const TIER_LIMIT: Record<string, number> = {
   "Tier 3": 15_000_000,
 };
 
-function CreateListing() {
+const CreateListing = () => {
   const navigate = useNavigate();
   const hasActive = !!businessActiveListing;
   const [showRedirect] = useState(hasActive);
@@ -217,13 +212,18 @@ function CreateListing() {
       </div>
     </div>
   );
-}
+};
 
-function Term({ label, value }: { label: string; value: string }) {
+const Term = ({ label, value }: { label: string; value: string }) => {
   return (
     <div>
       <dt className="text-xs uppercase tracking-wider text-muted-foreground">{label}</dt>
       <dd className="mt-1 font-medium">{value}</dd>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/dashboard/business/create-listing")({
+  head: () => ({ meta: [{ title: "Create a listing — Bridge" }] }),
+  component: CreateListing,
+});
