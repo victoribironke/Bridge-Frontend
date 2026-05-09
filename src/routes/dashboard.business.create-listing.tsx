@@ -16,6 +16,7 @@ import {
   formatNaira,
   formatNairaFull,
 } from "@/lib/mock-data";
+import { PAGES } from "@/lib/constants";
 
 const STEPS = ["Raise", "Terms", "References"];
 
@@ -48,7 +49,7 @@ const CreateListing = () => {
             Wait until it's fully funded and completed before creating a new one.
           </p>
           <button
-            onClick={() => navigate({ to: "/dashboard/business" })}
+            onClick={() => navigate({ to: PAGES.DASHBOARD_BUSINESS })}
             className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
           >
             Back to dashboard
@@ -68,7 +69,7 @@ const CreateListing = () => {
             generated.
           </p>
           <Link
-            to="/listings/$id"
+            to={PAGES.LISTINGS_ID}
             params={{ id: submitted.id }}
             className="mt-6 inline-flex rounded-md bg-primary px-5 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
