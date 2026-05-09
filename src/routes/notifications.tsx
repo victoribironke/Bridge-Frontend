@@ -3,12 +3,7 @@ import { useMemo, useState } from "react";
 import { businessNotifications, investorNotifications, type Notification } from "@/lib/mock-data";
 import { useMockAuth } from "@/lib/mock-auth";
 
-export const Route = createFileRoute("/notifications")({
-  head: () => ({ meta: [{ title: "Notifications — Bridge" }] }),
-  component: Notifications,
-});
-
-function Notifications() {
+const Notifications = () => {
   const { role } = useMockAuth();
   const initial = useMemo<Notification[]>(
     () => (role === "business" ? businessNotifications : investorNotifications),
@@ -63,4 +58,9 @@ function Notifications() {
       )}
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/notifications")({
+  head: () => ({ meta: [{ title: "Notifications — Bridge" }] }),
+  component: Notifications,
+});
