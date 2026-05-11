@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import {
@@ -38,7 +39,7 @@ const CreateListing = () => {
 
   const createMut = useCreateListingMutation();
 
-  const businessProfile = profileData?.business_profiles || {};
+  const businessProfile = (profileData as any)?.business_profiles || {};
   const tier = businessProfile.tier || 1;
   const limitKobo = TIER_LIMIT[tier] || 10_000_000;
   const limitNaira = limitKobo / 100;
@@ -61,6 +62,29 @@ const CreateListing = () => {
           <h2 className="font-display text-2xl">You already have an active listing</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Wait until it's fully funded and completed before creating a new one.
+          </p>
+          <button
+            onClick={() => navigate({ to: PAGES.DASHBOARD_BUSINESS })}
+            className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          >
+            Back to dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (profileData && businessProfile.monoAverageMonthlyInflow == null) {
+    return (
+      <div className="mx-auto max-w-2xl px-6 py-16">
+        <div className="rounded-2xl border border-warning/40 bg-warning/10 p-6">
+          <h2 className="flex items-center gap-2 font-display text-2xl">
+            <Loader2 className="h-6 w-6 animate-spin text-warning" />
+            Analyzing bank data
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            We are currently processing your connected bank inflows to generate your tailored deal
+            terms. This usually takes under a minute. Please check back soon.
           </p>
           <button
             onClick={() => navigate({ to: PAGES.DASHBOARD_BUSINESS })}
