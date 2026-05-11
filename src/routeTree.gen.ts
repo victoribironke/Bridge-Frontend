@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RegisterInvestorRouteImport } from './routes/register.investor'
 import { Route as RegisterBusinessRouteImport } from './routes/register.business'
@@ -23,6 +24,11 @@ import { Route as DashboardBusinessCreateListingRouteImport } from './routes/das
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -76,6 +82,7 @@ const DashboardBusinessCreateListingRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/listings/$id': typeof ListingsIdRoute
   '/register/business': typeof RegisterBusinessRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/listings/$id': typeof ListingsIdRoute
   '/register/business': typeof RegisterBusinessRoute
@@ -101,6 +109,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
   '/listings/$id': typeof ListingsIdRoute
   '/register/business': typeof RegisterBusinessRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/notifications'
     | '/listings/$id'
     | '/register/business'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
     | '/notifications'
     | '/listings/$id'
     | '/register/business'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/login'
     | '/notifications'
     | '/listings/$id'
     | '/register/business'
@@ -152,6 +164,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
   NotificationsRoute: typeof NotificationsRoute
   ListingsIdRoute: typeof ListingsIdRoute
   RegisterBusinessRoute: typeof RegisterBusinessRoute
@@ -170,6 +183,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -240,6 +260,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
   NotificationsRoute: NotificationsRoute,
   ListingsIdRoute: ListingsIdRoute,
   RegisterBusinessRoute: RegisterBusinessRoute,
@@ -253,3 +274,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
