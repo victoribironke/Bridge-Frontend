@@ -9,8 +9,11 @@ import {
   Select,
   Stepper,
 } from "@/components/form-bits";
-import { mockBvnVerify, mockSquadAccount, SECTORS } from "@/lib/mock-data";
-import { useMockAuth } from "@/lib/mock-auth";
+import { SECTORS, PAGES } from "@/lib/constants";
+import { useAuth } from "@/lib/auth";
+import { useRegisterInvestorMutation, useUpdatePreferencesMutation } from "@/hooks/mutations";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const STEPS = ["Personal", "BVN", "Preferences", "Done"];
 
@@ -18,65 +21,98 @@ const RISK = [
   {
     id: "conservative",
     label: "Conservative",
-    desc: "Tier 1 only. Steady, lower-return deals.",
+    desc: "Prioritize lower risk and consistent returns. Mostly established businesses and anchor ratings.",
   },
   {
     id: "balanced",
     label: "Balanced",
-    desc: "Tier 1 + Tier 2. Mix of stability and growth.",
+    desc: "Mix of growth and established businesses. Target 18-24% annual returns.",
   },
   {
     id: "growth",
     label: "Growth",
-    desc: "All tiers. Higher targets, higher variance.",
+    desc: "Higher risk tolerance for maximum returns. Open to early-stage (Seed) businesses.",
   },
 ];
 
-const TIMELINES = [
-  { id: "short", label: "Short", desc: "Under 6 months" },
-  { id: "medium", label: "Medium", desc: "6 to 12 months" },
-  { id: "flex", label: "Flexible", desc: "Any timeline" },
-];
-
-const InvestorRegister = () => {
-  const [step, setStep] = useState(0);
+const RegisterInvestor = () => {
   const navigate = useNavigate();
-  const { setRole } = useMockAuth();
+  const [step, setStep] = useState(0);
+  const { virtualAccountNumber } = useAuth();
+  const registerMut = useRegisterInvestorMutation();
+  const prefsMut = useUpdatePreferencesMutation();
 
   const [personal, setPersonal] = useState({
-    name: "",
+    fullName: "",
     email: "",
     phone: "",
     password: "",
   });
+
   const [bvn, setBvn] = useState("");
-  const [bvnState, setBvnState] = useState<{
-    status: "idle" | "loading" | "ok" | "err";
-    name?: string;
-  }>({ status: "idle" });
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [sectors, setSectors] = useState<string[]>([]);
-  const [risk, setRisk] = useState<string>("");
-  const [timeline, setTimeline] = useState<string>("");
-  const [range, setRange] = useState<string>("");
+  const [risk, setRisk] = useState("balanced");
+  const [amount, setAmount] = useState({ min: "50000", max: "2000000" });
 
-  const phoneOk = /^(?:\+234|0)[789]\d{9}$/.test(personal.phone);
-  const passwordOk = personal.password.length >= 8;
+  const handleRegister = () => {
+    registerMut.mutate(
+      {
+        fullName: personal.fullName,
+        email: personal.email,
+        phone: personal.phone,
+        password: personal.password,
+        bvn,
+      },
+      {
+        onSuccess: (data) => {
+          setUserId(data.user?.id || null); // Note: Assuming the API returns the user object or we can decode it, but we can set preferences later or skip.
+          setStep(2);
+        },
+        onError: (err) => {
+          toast.error(err.message || "Registration failed. BVN or email might be invalid.");
+        },
+      },
+    );
+  };
+
+  const handlePreferences = () => {
+    if (!userId) {
+      setStep(3);
+      return;
+    }
+    prefsMut.mutate(
+      {
+        userId,
+        data: {
+          sectorInterests: sectors,
+          riskTierPreference: risk,
+          investmentRangeMin: Number(amount.min) * 100,
+          investmentRangeMax: Number(amount.max) * 100,
+        },
+      },
+      {
+        onSettled: () => setStep(3),
+      },
+    );
+  };
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">
-      <h1 className="mb-8 font-display text-3xl">Set up your investor account</h1>
+      <h1 className="mb-8 font-display text-3xl">Investor sign up</h1>
       <Stepper steps={STEPS} current={step} />
 
       <div className="mt-8">
         {step === 0 && (
           <FormShell
-            title="Personal information"
+            title="Personal details"
+            subtitle="Let's get your account set up."
             footer={
               <>
                 <span />
                 <PrimaryBtn
-                  disabled={!personal.name || !personal.email || !phoneOk || !passwordOk}
+                  disabled={!personal.fullName || !personal.email || personal.password.length < 8}
                   onClick={() => setStep(1)}
                 >
                   Continue
@@ -84,13 +120,13 @@ const InvestorRegister = () => {
               </>
             }
           >
-            <Field label="Full name">
+            <Field label="Full name" hint="As it appears on your BVN">
               <Input
-                value={personal.name}
-                onChange={(e) => setPersonal({ ...personal, name: e.target.value })}
+                value={personal.fullName}
+                onChange={(e) => setPersonal({ ...personal, fullName: e.target.value })}
               />
             </Field>
-            <Field label="Email">
+            <Field label="Email address">
               <Input
                 type="email"
                 value={personal.email}
@@ -119,9 +155,18 @@ const InvestorRegister = () => {
             subtitle="Your BVN is used to confirm your identity. We never share it."
             footer={
               <>
-                <GhostBtn onClick={() => setStep(0)}>Back</GhostBtn>
-                <PrimaryBtn disabled={bvnState.status !== "ok"} onClick={() => setStep(2)}>
-                  Continue
+                <GhostBtn onClick={() => setStep(0)} disabled={registerMut.isPending}>
+                  Back
+                </GhostBtn>
+                <PrimaryBtn
+                  disabled={bvn.length !== 11 || registerMut.isPending}
+                  onClick={handleRegister}
+                >
+                  {registerMut.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Verify and Register"
+                  )}
                 </PrimaryBtn>
               </>
             }
@@ -129,28 +174,6 @@ const InvestorRegister = () => {
             <Field label="BVN">
               <Input value={bvn} onChange={(e) => setBvn(e.target.value)} maxLength={11} />
             </Field>
-            <div className="flex items-center gap-3">
-              <PrimaryBtn
-                disabled={bvn.length !== 11 || bvnState.status === "loading"}
-                onClick={async () => {
-                  setBvnState({ status: "loading" });
-                  try {
-                    const r = await mockBvnVerify();
-                    setBvnState({ status: "ok", name: r.name });
-                  } catch {
-                    setBvnState({ status: "err" });
-                  }
-                }}
-              >
-                {bvnState.status === "loading" ? "Verifying…" : "Verify BVN"}
-              </PrimaryBtn>
-              {bvnState.status === "ok" && (
-                <span className="text-sm text-success">✓ Verified as {bvnState.name}</span>
-              )}
-              {bvnState.status === "err" && (
-                <span className="text-sm text-destructive">Could not verify. Try again.</span>
-              )}
-            </div>
           </FormShell>
         )}
 
@@ -159,18 +182,18 @@ const InvestorRegister = () => {
             title="Investment preferences"
             subtitle="Optional. We use these to surface listings on the For You tab."
             footer={
-              <>
-                <GhostBtn onClick={() => setStep(1)}>Back</GhostBtn>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setStep(3)}
-                    className="text-sm text-muted-foreground hover:text-foreground"
-                  >
-                    Skip and set later
-                  </button>
-                  <PrimaryBtn onClick={() => setStep(3)}>Continue</PrimaryBtn>
-                </div>
-              </>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setStep(3)}
+                  disabled={prefsMut.isPending}
+                  className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
+                >
+                  Skip and set later
+                </button>
+                <PrimaryBtn onClick={handlePreferences} disabled={prefsMut.isPending}>
+                  {prefsMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue"}
+                </PrimaryBtn>
+              </div>
             }
           >
             <div>
@@ -199,80 +222,79 @@ const InvestorRegister = () => {
             </div>
 
             <div>
-              <div className="text-sm font-medium">Risk tier preference</div>
-              <div className="mt-2 grid gap-3 sm:grid-cols-3">
+              <div className="text-sm font-medium">Risk profile</div>
+              <div className="mt-2 space-y-2">
                 {RISK.map((r) => (
                   <button
                     key={r.id}
                     onClick={() => setRisk(r.id)}
                     className={
-                      "rounded-xl border p-4 text-left " +
+                      "block w-full rounded-xl border p-4 text-left transition-colors " +
                       (risk === r.id
-                        ? "border-primary ring-2 ring-primary/20"
-                        : "border-border hover:border-primary/40")
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50 hover:bg-secondary/40")
                     }
                   >
-                    <div className="font-medium">{r.label}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">{r.desc}</div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={
+                          "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border " +
+                          (risk === r.id ? "border-primary" : "border-muted-foreground")
+                        }
+                      >
+                        {risk === r.id && <span className="h-2 w-2 rounded-full bg-primary" />}
+                      </span>
+                      <span className="font-medium">{r.label}</span>
+                    </div>
+                    <p className="mt-1 pl-6 text-sm text-muted-foreground">{r.desc}</p>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div>
-              <div className="text-sm font-medium">Return timeline</div>
-              <div className="mt-2 grid gap-3 sm:grid-cols-3">
-                {TIMELINES.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => setTimeline(t.id)}
-                    className={
-                      "rounded-xl border p-4 text-left " +
-                      (timeline === t.id
-                        ? "border-primary ring-2 ring-primary/20"
-                        : "border-border hover:border-primary/40")
-                    }
-                  >
-                    <div className="font-medium">{t.label}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">{t.desc}</div>
-                  </button>
-                ))}
-              </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Min investment (₦)" hint="Optional">
+                <Input
+                  type="number"
+                  value={amount.min}
+                  onChange={(e) => setAmount({ ...amount, min: e.target.value })}
+                />
+              </Field>
+              <Field label="Max investment (₦)" hint="Optional">
+                <Input
+                  type="number"
+                  value={amount.max}
+                  onChange={(e) => setAmount({ ...amount, max: e.target.value })}
+                />
+              </Field>
             </div>
-
-            <Field label="Investment range per deal">
-              <Select value={range} onChange={(e) => setRange(e.target.value)}>
-                <option value="">Pick a range</option>
-                <option>₦25,000 – ₦100,000</option>
-                <option>₦100,000 – ₦500,000</option>
-                <option>₦500,000 – ₦2,000,000</option>
-                <option>₦2,000,000+</option>
-              </Select>
-            </Field>
           </FormShell>
         )}
 
         {step === 3 && (
-          <FormShell title="Your account is ready">
-            <div className="rounded-xl border border-border bg-secondary/40 p-5 text-sm">
+          <div className="rounded-2xl border border-success/30 bg-success/10 p-8 text-center">
+            <h2 className="font-display text-3xl">You're all set!</h2>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Your account has been created and your BVN verified. We've generated your unique Squad
+              virtual account for funding your wallet.
+            </p>
+            <div className="mt-6 inline-block rounded-xl border border-border bg-card px-6 py-4">
               <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                Squad virtual account
+                Squad Wallet Account
               </div>
-              <div className="mt-1 font-display text-2xl">{mockSquadAccount()}</div>
-              <p className="mt-2 text-muted-foreground">
-                Invested capital and returns flow through this account.
-              </p>
+              <div className="mt-1 font-display text-2xl tracking-widest text-primary">
+                {virtualAccountNumber || "Pending..."}
+              </div>
             </div>
-            <PrimaryBtn
-              className="w-full"
-              onClick={() => {
-                setRole("investor");
-                navigate({ to: "/dashboard/investor" });
-              }}
-            >
-              Go to dashboard
-            </PrimaryBtn>
-          </FormShell>
+            <div className="mt-8">
+              <button
+                onClick={() => navigate({ to: PAGES.DASHBOARD_INVESTOR })}
+                className="rounded-md bg-primary px-5 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Go to dashboard
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -280,6 +302,6 @@ const InvestorRegister = () => {
 };
 
 export const Route = createFileRoute("/register/investor")({
-  head: () => ({ meta: [{ title: "Register as an investor — Bridge" }] }),
-  component: InvestorRegister,
+  head: () => ({ meta: [{ title: "Investor Sign Up — Bridge" }] }),
+  component: RegisterInvestor,
 });
