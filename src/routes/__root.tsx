@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
-import { MockAuthProvider, useMockAuth, type AuthRole } from "@/lib/mock-auth";
+import { AuthProvider, useAuth, type UserType } from "@/lib/auth";
 import { PAGES } from "@/lib/constants";
 
 const NotFoundComponent = () => {
@@ -84,9 +84,9 @@ const RootComponent = () => {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <MockAuthProvider>
+      <AuthProvider>
         <SiteChrome />
-      </MockAuthProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };
@@ -104,7 +104,7 @@ const SiteChrome = () => {
 };
 
 const Header = () => {
-  const { role, setRole } = useMockAuth();
+  const { userType, logout } = useAuth();
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
@@ -115,7 +115,7 @@ const Header = () => {
           <span className="font-display text-xl tracking-tight">Bridge</span>
         </Link>
         <nav className="hidden items-center gap-6 md:flex text-sm">
-          {role === "guest" && (
+          {userType === "guest" && (
             <>
               <Link
                 to={PAGES.REGISTER_BUSINESS}
@@ -131,7 +131,7 @@ const Header = () => {
               </Link>
             </>
           )}
-          {role === "investor" && (
+          {userType === "investor" && (
             <>
               <Link
                 to={PAGES.DASHBOARD_INVESTOR}
@@ -155,7 +155,7 @@ const Header = () => {
               </Link>
             </>
           )}
-          {role === "business" && (
+          {userType === "business" && (
             <>
               <Link
                 to={PAGES.DASHBOARD_BUSINESS}
@@ -180,37 +180,24 @@ const Header = () => {
           )}
         </nav>
         <div className="flex items-center gap-2">
-          <RoleSwitch value={role} onChange={setRole} />
+          {userType !== "guest" ? (
+            <button
+              onClick={logout}
+              className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
+            >
+              Log out
+            </button>
+          ) : (
+            <Link
+              to={PAGES.LOGIN}
+              className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
+            >
+              Log in
+            </Link>
+          )}
         </div>
       </div>
     </header>
-  );
-};
-
-const RoleSwitch = ({ value, onChange }: { value: AuthRole; onChange: (r: AuthRole) => void }) => {
-  const opts: { value: AuthRole; label: string }[] = [
-    { value: "guest", label: "Guest" },
-    { value: "investor", label: "Investor" },
-    { value: "business", label: "Business" },
-  ];
-  return (
-    <div className="hidden md:flex items-center rounded-full border border-border bg-card p-0.5 text-xs">
-      <span className="px-2 text-muted-foreground">Mock auth</span>
-      {opts.map((o) => (
-        <button
-          key={o.value}
-          onClick={() => onChange(o.value)}
-          className={
-            "rounded-full px-3 py-1 transition-colors " +
-            (value === o.value
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground")
-          }
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
   );
 };
 
