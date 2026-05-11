@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Field,
   FormShell,
@@ -15,6 +15,7 @@ import { SECTORS, PAGES } from "@/lib/constants";
 import { formatNairaFull } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useRegisterBusinessMutation, useConnectBankMutation } from "@/hooks/mutations";
+import { useBusinessProfile } from "@/hooks/queries";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,9 +44,22 @@ const BusinessRegister = () => {
     years: "",
     revenue: "",
     description: "",
+    beneficiaryAccount: "",
   });
 
   const [bankData, setBankData] = useState<any>(null);
+
+  const { data: profileData } = useBusinessProfile({
+    refetchInterval: bankData && !bankData.analyzed ? 3000 : false,
+  });
+
+  const monoInflow = (profileData as any)?.business_profiles?.monoAverageMonthlyInflow;
+
+  useEffect(() => {
+    if (bankData && !bankData.analyzed && monoInflow != null) {
+      setBankData({ ...bankData, analyzed: true, inflow: monoInflow / 100 });
+    }
+  }, [monoInflow, bankData]);
 
   const phoneOk = /^(?:\+234|0)[789]\d{9}$/.test(personal.phone);
   const passwordOk = personal.password.length >= 8;
@@ -63,6 +77,7 @@ const BusinessRegister = () => {
         location: biz.location,
         yearsInOperation: Number(biz.years),
         averageMonthlyRevenue: Number(biz.revenue) * 100, // kobo
+        beneficiaryAccount: biz.beneficiaryAccount,
         businessDescription: biz.description,
       },
       {
@@ -83,7 +98,7 @@ const BusinessRegister = () => {
 
     connectMut.mutate(fakeCode, {
       onSuccess: () => {
-        setBankData({ provider, inflow: Number(biz.revenue) });
+        setBankData({ provider, analyzed: false });
       },
       onError: (err) => {
         toast.error(err.message || "Failed to connect bank account.");
@@ -173,6 +188,7 @@ const BusinessRegister = () => {
                     !biz.sector ||
                     !biz.location ||
                     !biz.revenue ||
+                    biz.beneficiaryAccount.length !== 10 ||
                     biz.description.length < 80 ||
                     registerMut.isPending
                   }
@@ -218,6 +234,16 @@ const BusinessRegister = () => {
               />
             </Field>
             <Field
+              label="Payout Bank Account"
+              hint="10-digit Nigerian bank account for receiving funds"
+            >
+              <Input
+                value={biz.beneficiaryAccount}
+                onChange={(e) => setBiz({ ...biz, beneficiaryAccount: e.target.value })}
+                maxLength={10}
+              />
+            </Field>
+            <Field
               label="Average monthly revenue (₦)"
               hint="This figure will be compared to the linked bank account in the next step. Significant discrepancies appear on your profile."
             >
@@ -245,7 +271,7 @@ const BusinessRegister = () => {
             footer={
               <>
                 <span />
-                <PrimaryBtn disabled={!bankData} onClick={() => setStep(4)}>
+                <PrimaryBtn disabled={!bankData || !bankData.analyzed} onClick={() => setStep(4)}>
                   Continue
                 </PrimaryBtn>
               </>
@@ -265,6 +291,17 @@ const BusinessRegister = () => {
                       {connectMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : p}
                     </button>
                   ))}
+                </div>
+              </div>
+            ) : !bankData.analyzed ? (
+              <div className="rounded-xl border border-warning/40 bg-warning/10 p-5 text-sm">
+                <div className="flex items-center gap-2 font-medium text-warning">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Analyzing bank data...
+                </div>
+                <div className="mt-2 text-muted-foreground">
+                  Linked via {bankData.provider}. We are currently processing 12+ months of inflows.
+                  This usually takes under a minute.
                 </div>
               </div>
             ) : (
