@@ -1,6 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { listingCards, platformStats, formatNaira } from "@/lib/mock-data";
+import { usePlatformStats, useListings } from "@/hooks/queries";
+import { formatNaira } from "@/lib/utils";
 import { PAGES } from "@/lib/constants";
+import { Loader2 } from "lucide-react";
 
 const Index = () => {
   return (
@@ -51,22 +54,32 @@ const Hero = () => {
 };
 
 const Stats = () => {
+  const { data: statsData, isLoading } = usePlatformStats();
+
+  if (isLoading || !statsData) {
+    return (
+      <section className="border-y border-border bg-card py-20 flex justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </section>
+    );
+  }
+
   const items = [
     {
       label: "Businesses funded",
-      value: platformStats.businessesFunded.toLocaleString(),
+      value: (statsData.totalBusinessesFunded || 0).toLocaleString(),
     },
     {
       label: "Capital deployed",
-      value: formatNaira(platformStats.capitalDeployed),
+      value: formatNaira(statsData.totalCapitalDeployedKobo || 0),
     },
     {
       label: "Average investor return",
-      value: `${platformStats.averageReturnPct}%`,
+      value: `${statsData.averageInvestorReturnPercent || 0}%`,
     },
     {
       label: "Average repayment time",
-      value: `${platformStats.averageRepaymentMonths} months`,
+      value: `${Math.round((statsData.averageRepaymentDays || 0) / 30)} months`,
     },
   ];
 
@@ -127,7 +140,17 @@ const HowItWorks = () => {
 };
 
 const FeaturedListings = () => {
-  const featured = listingCards.slice(0, 3);
+  const { data, isLoading } = useListings({ limit: 3, sort: "highest_bridge_rating" });
+
+  if (isLoading) {
+    return (
+      <section className="border-t border-border bg-secondary/40 py-24 flex justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </section>
+    );
+  }
+
+  const featured = data?.data || [];
 
   return (
     <section className="border-t border-border bg-secondary/40">
@@ -139,7 +162,7 @@ const FeaturedListings = () => {
           </Link>
         </div>
         <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {featured.map((l) => (
+          {featured.map((l: any) => (
             <Link
               key={l.id}
               to={PAGES.LISTINGS_ID}
@@ -148,20 +171,25 @@ const FeaturedListings = () => {
             >
               <div className="flex items-center gap-2 text-xs">
                 <span className="rounded-full border border-border px-2 py-0.5 text-muted-foreground">
-                  {l.sector}
+                  {l.business_profiles?.sector || "Sector"}
                 </span>
                 <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">
-                  {l.tier}
+                  Tier {l.business_profiles?.tier || "1"}
                 </span>
               </div>
-              <h3 className="mt-4 font-display text-2xl">{l.business}</h3>
+              <h3 className="mt-4 font-display text-2xl">
+                {l.business_profiles?.businessName || "Business"}
+              </h3>
               <div className="mt-2 text-sm text-muted-foreground">
-                Standing · <span className="font-medium text-foreground">{l.standing}</span>
+                Standing ·{" "}
+                <span className="font-medium text-foreground">
+                  {l.bridge_ratings?.standing || "Seed"}
+                </span>
               </div>
               <div className="mt-6 flex items-end justify-between border-t border-border pt-4">
                 <div>
                   <div className="text-xs text-muted-foreground">Target return</div>
-                  <div className="font-display text-2xl">{l.targetReturnPct}%</div>
+                  <div className="font-display text-2xl">{l.totalReturnPercent}%</div>
                 </div>
                 <div className="text-sm text-primary group-hover:underline">View →</div>
               </div>
