@@ -1,17 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useInvestorWallet, useInvestorDeals, useInvestorSummary } from "@/hooks/queries";
+import {
+  useInvestorWallet,
+  useInvestorDeals,
+  useInvestorSummary,
+  usePaymentLink,
+} from "@/hooks/queries";
 import { formatNaira, formatNairaFull } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
 const Portfolio = () => {
   const [tab, setTab] = useState<"active" | "completed" | "defaulted">("active");
   const [withdraw, setWithdraw] = useState(false);
+  const [fundModal, setFundModal] = useState(false);
 
   const { data: summary, isLoading: isSummaryLoading } = useInvestorSummary();
   const { data: wallet, isLoading: isWalletLoading } = useInvestorWallet();
   const { data: dealsData, isLoading: isDealsLoading } = useInvestorDeals();
+  const { data: paymentData, isLoading: isPaymentLoading } = usePaymentLink();
 
   const deals = dealsData || [];
   const activeDeals = deals.filter((d: any) => d.status === "active");
@@ -61,12 +68,20 @@ const Portfolio = () => {
                 formatNairaFull(wallet?.availableBalance || 0)
               )}
             </div>
-            <button
-              onClick={() => setWithdraw(true)}
-              className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-secondary"
-            >
-              Withdraw
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFundModal(true)}
+                className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-secondary"
+              >
+                Fund Wallet
+              </button>
+              <button
+                onClick={() => setWithdraw(true)}
+                className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-secondary"
+              >
+                Withdraw
+              </button>
+            </div>
           </div>
         </div>
         <div className="rounded-2xl border border-border bg-card p-5">
@@ -196,6 +211,55 @@ const Portfolio = () => {
               className="mt-6 w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
             >
               Got it
+            </button>
+          </div>
+        </div>
+      )}
+      {fundModal && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-2xl">
+            <h3 className="font-display text-2xl">Fund your wallet</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Transfer funds to your dedicated Squad virtual account to start investing.
+            </p>
+            {isPaymentLoading ? (
+              <div className="flex justify-center py-6">
+                <Loader2 className="animate-spin text-primary" />
+              </div>
+            ) : paymentData ? (
+              <div className="mt-6 text-center">
+                <div className="mb-4 inline-block rounded-xl border border-border bg-card px-6 py-4">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Squad Virtual Account
+                  </div>
+                  <div className="mt-1 font-display text-2xl tracking-widest text-primary">
+                    {paymentData.virtualAccountNumber}
+                  </div>
+                </div>
+                {paymentData.paymentLink && (
+                  <div className="mt-4 text-sm text-muted-foreground">
+                    Or pay via{" "}
+                    <a
+                      href={paymentData.paymentLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Squad Checkout
+                    </a>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mt-6 text-center text-sm text-destructive">
+                Failed to load payment details.
+              </div>
+            )}
+            <button
+              onClick={() => setFundModal(false)}
+              className="mt-6 w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              Done
             </button>
           </div>
         </div>
