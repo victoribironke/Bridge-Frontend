@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { type ReactNode } from "react";
 
 export const Stepper = ({ steps, current }: { steps: string[]; current: number }) => {
@@ -41,16 +42,16 @@ export const FormShell = ({
   children,
   footer,
 }: {
-  title: string;
+  title?: string;
   subtitle?: string;
   children: ReactNode;
   footer?: ReactNode;
 }) => {
   return (
     <div className="rounded-2xl border border-border bg-card p-8">
-      <h2 className="font-display text-2xl">{title}</h2>
+      {title && <h2 className="font-display text-2xl">{title}</h2>}
       {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
-      <div className="mt-6 space-y-4">{children}</div>
+      <div className={cn("space-y-4", title && "mt-6")}>{children}</div>
       {footer && <div className="mt-8 flex justify-between gap-3">{footer}</div>}
     </div>
   );
