@@ -1,3 +1,5 @@
+export const BACKEND_URL = "https://bridge-backend-black.vercel.app/api/v1";
+
 export const PAGES = {
   HOME: "/",
   NOTIFICATIONS: "/notifications",
@@ -9,4 +11,16 @@ export const PAGES = {
   DASHBOARD_BUSINESS_PAYMENTS: "/dashboard/business/payments",
   DASHBOARD_BUSINESS_CREATE_LISTING: "/dashboard/business/create-listing",
   LISTINGS_ID: "/listings/$id",
+  LOGIN: "/login",
 } as const;
+
+export const SECTORS = [
+  "Agriculture",
+  "Retail",
+  "Technology",
+  "Logistics",
+  "Healthcare",
+  "Manufacturing",
+  "Services",
+  "Real Estate",
+];
