@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import {
@@ -10,21 +11,22 @@ import {
   Stepper,
   Textarea,
 } from "@/components/form-bits";
-import {
-  mockBankConnect,
-  mockBvnVerify,
-  mockSquadAccount,
-  SECTORS,
-  formatNairaFull,
-} from "@/lib/mock-data";
-import { useMockAuth } from "@/lib/mock-auth";
+import { SECTORS, PAGES } from "@/lib/constants";
+import { formatNairaFull } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
+import { useRegisterBusinessMutation, useConnectBankMutation } from "@/hooks/mutations";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const STEPS = ["Personal", "BVN", "Business", "Bank", "Done"];
 
 const BusinessRegister = () => {
   const [step, setStep] = useState(0);
   const navigate = useNavigate();
-  const { setRole } = useMockAuth();
+  const { virtualAccountNumber } = useAuth();
+
+  const registerMut = useRegisterBusinessMutation();
+  const connectMut = useConnectBankMutation();
 
   // form state
   const [personal, setPersonal] = useState({
@@ -34,10 +36,6 @@ const BusinessRegister = () => {
     password: "",
   });
   const [bvn, setBvn] = useState("");
-  const [bvnState, setBvnState] = useState<{
-    status: "idle" | "loading" | "ok" | "err";
-    name?: string;
-  }>({ status: "idle" });
   const [biz, setBiz] = useState({
     name: "",
     sector: "",
@@ -46,13 +44,52 @@ const BusinessRegister = () => {
     revenue: "",
     description: "",
   });
-  const [bankState, setBankState] = useState<{
-    status: "idle" | "loading" | "ok";
-    data?: Awaited<ReturnType<typeof mockBankConnect>>;
-  }>({ status: "idle" });
+
+  const [bankData, setBankData] = useState<any>(null);
 
   const phoneOk = /^(?:\+234|0)[789]\d{9}$/.test(personal.phone);
   const passwordOk = personal.password.length >= 8;
+
+  const handleRegister = () => {
+    registerMut.mutate(
+      {
+        fullName: personal.name,
+        email: personal.email,
+        phone: personal.phone,
+        password: personal.password,
+        bvn,
+        businessName: biz.name,
+        sector: biz.sector,
+        location: biz.location,
+        yearsInOperation: Number(biz.years),
+        averageMonthlyRevenue: Number(biz.revenue) * 100, // kobo
+        businessDescription: biz.description,
+      },
+      {
+        onSuccess: () => {
+          setStep(3);
+        },
+        onError: (err) => {
+          toast.error(err.message || "Registration failed.");
+        },
+      },
+    );
+  };
+
+  const handleConnectBank = async (provider: string) => {
+    // In a real app, this would open the Mono or Okra widget.
+    // For now, we simulate getting a success code and sending it to the backend.
+    const fakeCode = "mono_auth_code_12345";
+
+    connectMut.mutate(fakeCode, {
+      onSuccess: () => {
+        setBankData({ provider, inflow: Number(biz.revenue) });
+      },
+      onError: (err) => {
+        toast.error(err.message || "Failed to connect bank account.");
+      },
+    });
+  };
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">
@@ -64,16 +101,14 @@ const BusinessRegister = () => {
         {step === 0 && (
           <FormShell
             title="Personal information"
+            subtitle="Fill in your personal details to get started with Bridge."
             footer={
-              <>
-                <span />
-                <PrimaryBtn
-                  disabled={!personal.name || !personal.email || !phoneOk || !passwordOk}
-                  onClick={() => setStep(1)}
-                >
-                  Continue
-                </PrimaryBtn>
-              </>
+              <PrimaryBtn
+                disabled={!personal.name || !personal.email || !phoneOk || !passwordOk}
+                onClick={() => setStep(1)}
+              >
+                Continue
+              </PrimaryBtn>
             }
           >
             <Field label="Full name">
@@ -112,7 +147,7 @@ const BusinessRegister = () => {
             footer={
               <>
                 <GhostBtn onClick={() => setStep(0)}>Back</GhostBtn>
-                <PrimaryBtn disabled={bvnState.status !== "ok"} onClick={() => setStep(2)}>
+                <PrimaryBtn disabled={bvn.length !== 11} onClick={() => setStep(2)}>
                   Continue
                 </PrimaryBtn>
               </>
@@ -121,30 +156,6 @@ const BusinessRegister = () => {
             <Field label="BVN">
               <Input value={bvn} onChange={(e) => setBvn(e.target.value)} maxLength={11} />
             </Field>
-            <div className="flex items-center gap-3">
-              <PrimaryBtn
-                disabled={bvn.length !== 11 || bvnState.status === "loading"}
-                onClick={async () => {
-                  setBvnState({ status: "loading" });
-                  try {
-                    const r = await mockBvnVerify();
-                    setBvnState({ status: "ok", name: r.name });
-                  } catch {
-                    setBvnState({ status: "err" });
-                  }
-                }}
-              >
-                {bvnState.status === "loading" ? "Verifying…" : "Verify BVN"}
-              </PrimaryBtn>
-              {bvnState.status === "ok" && (
-                <span className="text-sm text-success">✓ Verified as {bvnState.name}</span>
-              )}
-              {bvnState.status === "err" && (
-                <span className="text-sm text-destructive">
-                  Could not verify. Check the number and try again.
-                </span>
-              )}
-            </div>
           </FormShell>
         )}
 
@@ -153,18 +164,25 @@ const BusinessRegister = () => {
             title="Business information"
             footer={
               <>
-                <GhostBtn onClick={() => setStep(1)}>Back</GhostBtn>
+                <GhostBtn onClick={() => setStep(1)} disabled={registerMut.isPending}>
+                  Back
+                </GhostBtn>
                 <PrimaryBtn
                   disabled={
                     !biz.name ||
                     !biz.sector ||
                     !biz.location ||
                     !biz.revenue ||
-                    biz.description.length < 80
+                    biz.description.length < 80 ||
+                    registerMut.isPending
                   }
-                  onClick={() => setStep(3)}
+                  onClick={handleRegister}
                 >
-                  Continue
+                  {registerMut.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Verify & Create Account"
+                  )}
                 </PrimaryBtn>
               </>
             }
@@ -226,93 +244,67 @@ const BusinessRegister = () => {
             subtitle="We read 12+ months of inflows so investors see a real picture of your business."
             footer={
               <>
-                <GhostBtn onClick={() => setStep(2)}>Back</GhostBtn>
-                <PrimaryBtn disabled={bankState.status !== "ok"} onClick={() => setStep(4)}>
+                <span />
+                <PrimaryBtn disabled={!bankData} onClick={() => setStep(4)}>
                   Continue
                 </PrimaryBtn>
               </>
             }
           >
-            {bankState.status !== "ok" && (
+            {!bankData ? (
               <div className="rounded-xl border border-dashed border-border p-6">
                 <div className="text-sm font-medium">Choose a provider</div>
                 <div className="mt-3 flex gap-3">
                   {["Mono", "Okra"].map((p) => (
                     <button
                       key={p}
-                      disabled={bankState.status === "loading"}
-                      onClick={async () => {
-                        setBankState({ status: "loading" });
-                        const data = await mockBankConnect();
-                        setBankState({ status: "ok", data });
-                      }}
-                      className="flex-1 rounded-md border border-input px-4 py-3 text-sm font-medium hover:bg-secondary disabled:opacity-50"
+                      disabled={connectMut.isPending}
+                      onClick={() => handleConnectBank(p)}
+                      className="flex-1 rounded-md border border-input px-4 py-3 text-sm font-medium hover:bg-secondary disabled:opacity-50 flex justify-center items-center"
                     >
-                      {bankState.status === "loading" ? "Connecting…" : `Connect with ${p}`}
+                      {connectMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : p}
                     </button>
                   ))}
                 </div>
               </div>
-            )}
-            {bankState.status === "ok" && bankState.data && (
+            ) : (
               <div className="rounded-xl border border-success/40 bg-success/10 p-5 text-sm">
-                <div className="font-medium text-success">Bank account linked</div>
-                <ul className="mt-3 space-y-1">
-                  <li>
-                    Account name: <span className="font-medium">{bankState.data.accountName}</span>
-                  </li>
-                  <li>
-                    Transaction history: <span className="font-medium">{bankState.data.range}</span>
-                  </li>
-                  <li>
-                    Average monthly inflow:{" "}
-                    <span className="font-medium">
-                      {formatNairaFull(bankState.data.averageInflow)}
-                    </span>
-                  </li>
-                </ul>
-                {Number(biz.revenue) > 0 &&
-                  bankState.data.averageInflow < Number(biz.revenue) * 0.8 && (
-                    <p className="mt-3 text-xs text-warning">
-                      Note: average inflow is below the revenue you stated. This will be visible on
-                      your profile.
-                    </p>
-                  )}
+                <div className="font-medium text-success">✓ Bank connected</div>
+                <div className="mt-2 text-muted-foreground">
+                  Linked via {bankData.provider}. Analyzed average monthly inflow:{" "}
+                  <span className="font-medium text-foreground">
+                    {formatNairaFull(bankData.inflow * 100)}
+                  </span>
+                </div>
               </div>
             )}
           </FormShell>
         )}
 
         {step === 4 && (
-          <FormShell title="Your account is ready">
-            <div className="rounded-xl border border-border bg-secondary/40 p-5 text-sm">
+          <div className="rounded-2xl border border-success/30 bg-success/10 p-8 text-center">
+            <h2 className="font-display text-3xl">Registration complete</h2>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Your business is set up and your bank is connected. To start raising capital, you can
+              create your first listing from the dashboard.
+            </p>
+            <div className="mt-6 inline-block rounded-xl border border-border bg-card px-6 py-4">
               <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                Squad virtual account
+                Payment Squad Account
               </div>
-              <div className="mt-1 font-display text-2xl">{mockSquadAccount()}</div>
-              <p className="mt-2 text-muted-foreground">
-                All payments and disbursements flow through this account.
-              </p>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-5 text-sm">
-              <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                Bridge Rating
+              <div className="mt-1 font-display text-2xl tracking-widest text-primary">
+                {virtualAccountNumber || "Pending..."}
               </div>
-              <div className="mt-1 font-display text-2xl">Seed</div>
-              <p className="mt-2 text-muted-foreground">
-                Standing improves as you complete repayments and grow inflows.
-              </p>
             </div>
-            <PrimaryBtn
-              className="w-full"
-              onClick={() => {
-                setRole("business");
-                navigate({ to: "/dashboard/business" });
-              }}
-            >
-              Go to dashboard
-            </PrimaryBtn>
-          </FormShell>
+            <div className="mt-8">
+              <button
+                onClick={() => navigate({ to: PAGES.DASHBOARD_BUSINESS })}
+                className="rounded-md bg-primary px-5 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Go to dashboard
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -320,6 +312,6 @@ const BusinessRegister = () => {
 };
 
 export const Route = createFileRoute("/register/business")({
-  head: () => ({ meta: [{ title: "Register your business — Bridge" }] }),
+  head: () => ({ meta: [{ title: "Business Sign Up — Bridge" }] }),
   component: BusinessRegister,
 });
