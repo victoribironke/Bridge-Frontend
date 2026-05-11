@@ -8,13 +8,16 @@ import {
 } from "@/hooks/queries";
 import { formatNaira } from "@/lib/utils";
 import { PAGES } from "@/lib/constants";
+import { useRepayMutation } from "@/hooks/mutations";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const BusinessDashboard = () => {
   const { data: profileData, isLoading: isProfileLoading } = useBusinessProfile();
   const { data: stats, isLoading: isStatsLoading } = useBusinessStats();
   const { data: activeListing, isLoading: isListingLoading } = useBusinessActiveListing();
   const { data: activity, isLoading: isActivityLoading } = useBusinessActivity();
+  const repayMut = useRepayMutation();
 
   if (isProfileLoading) {
     return (
@@ -24,8 +27,19 @@ const BusinessDashboard = () => {
     );
   }
 
-  const businessProfile = profileData?.business_profiles || {};
-  const rating = profileData?.bridge_ratings || { overallStanding: "Seed", score: 0 };
+  const handleRepay = (listingId: string) => {
+    repayMut.mutate(listingId, {
+      onSuccess: () => {
+        toast.success("Listing fully repaid!");
+      },
+      onError: (err: any) => {
+        toast.error(err.message || "Failed to repay listing.");
+      },
+    });
+  };
+
+  const businessProfile = (profileData as any)?.business_profiles || {};
+  const rating = (profileData as any)?.bridge_ratings || { overallStanding: "Seed", score: 0 };
 
   // Calculate rating percentage assuming max score is 1000
   const ratingPct = Math.min(100, Math.max(0, (rating.score / 1000) * 100));
@@ -143,6 +157,21 @@ const BusinessDashboard = () => {
                 </div>
               ))}
             </div>
+            {activeListing.status === "funded" && (
+              <div className="mt-5 border-t border-border pt-4 text-right">
+                <button
+                  disabled={repayMut.isPending}
+                  onClick={() => handleRepay(activeListing.id)}
+                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  {repayMut.isPending ? (
+                    <Loader2 className="animate-spin inline h-4 w-4" />
+                  ) : (
+                    "Repay in Full"
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </section>
