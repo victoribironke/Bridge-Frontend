@@ -89,6 +89,18 @@ export const useCreateListingMutation = () => {
   });
 };
 
+export const useRepayMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (listingId: string) =>
+      apiFetch<any>(`/business/repay/${listingId}`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["business-active-listing"] });
+      queryClient.invalidateQueries({ queryKey: ["business-stats"] });
+    },
+  });
+};
+
 // INVESTOR ACTIONS
 export const useInvestMutation = () => {
   const queryClient = useQueryClient();
