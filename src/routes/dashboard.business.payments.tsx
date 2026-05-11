@@ -45,7 +45,7 @@ const Payments = () => {
       <section className="mt-6 grid gap-6 md:grid-cols-[260px_1fr]">
         <div className="rounded-2xl border border-border bg-card p-5 text-center">
           {isLinkLoading ? (
-            <div className="mx-auto flex h-[240px] w-[240px] items-center justify-center rounded-lg border border-border bg-secondary/50">
+            <div className="mx-auto flex h-60 w-60 items-center justify-center rounded-lg border border-border bg-secondary/50">
               <Loader2 className="animate-spin text-primary" />
             </div>
           ) : (
