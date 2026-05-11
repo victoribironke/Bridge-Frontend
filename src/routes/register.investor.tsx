@@ -47,6 +47,7 @@ const RegisterInvestor = () => {
     email: "",
     phone: "",
     password: "",
+    beneficiaryAccount: "",
   });
 
   const [bvn, setBvn] = useState("");
@@ -63,6 +64,7 @@ const RegisterInvestor = () => {
         email: personal.email,
         phone: personal.phone,
         password: personal.password,
+        beneficiaryAccount: personal.beneficiaryAccount,
         bvn,
       },
       {
@@ -112,7 +114,12 @@ const RegisterInvestor = () => {
               <>
                 <span />
                 <PrimaryBtn
-                  disabled={!personal.fullName || !personal.email || personal.password.length < 8}
+                  disabled={
+                    !personal.fullName ||
+                    !personal.email ||
+                    personal.password.length < 8 ||
+                    personal.beneficiaryAccount.length !== 10
+                  }
                   onClick={() => setStep(1)}
                 >
                   Continue
@@ -144,6 +151,16 @@ const RegisterInvestor = () => {
                 type="password"
                 value={personal.password}
                 onChange={(e) => setPersonal({ ...personal, password: e.target.value })}
+              />
+            </Field>
+            <Field
+              label="Payout Bank Account"
+              hint="10-digit Nigerian bank account for withdrawing returns"
+            >
+              <Input
+                value={personal.beneficiaryAccount}
+                onChange={(e) => setPersonal({ ...personal, beneficiaryAccount: e.target.value })}
+                maxLength={10}
               />
             </Field>
           </FormShell>
