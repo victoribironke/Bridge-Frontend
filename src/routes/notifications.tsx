@@ -1,27 +1,45 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { businessNotifications, investorNotifications, type Notification } from "@/lib/mock-data";
-import { useMockAuth } from "@/lib/mock-auth";
+import { useNotifications } from "@/hooks/queries";
+import {
+  useMarkNotificationReadMutation,
+  useMarkAllNotificationsReadMutation,
+} from "@/hooks/mutations";
+import { useAuth } from "@/lib/auth";
+import { Loader2 } from "lucide-react";
 
 const Notifications = () => {
-  const { role } = useMockAuth();
-  const initial = useMemo<Notification[]>(
-    () => (role === "business" ? businessNotifications : investorNotifications),
-    [role],
-  );
-  const [items, setItems] = useState<Notification[]>(initial);
+  const { userType: role } = useAuth();
+  const { data: notifsData, isLoading } = useNotifications();
+  const markReadMut = useMarkNotificationReadMutation();
+  const markAllMut = useMarkAllNotificationsReadMutation();
 
-  const markAll = () => setItems(items.map((n) => ({ ...n, unread: false })));
-  const markOne = (id: string) =>
-    setItems(items.map((n) => (n.id === id ? { ...n, unread: false } : n)));
+  const items = notifsData || [];
+
+  const markAll = () => markAllMut.mutate();
+  const markOne = (id: string) => markReadMut.mutate(id);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-3xl">Notifications</h1>
-        <button onClick={markAll} className="text-sm text-primary hover:underline">
-          Mark all as read
-        </button>
+        {items.length > 0 && (
+          <button
+            onClick={markAll}
+            disabled={markAllMut.isPending}
+            className="text-sm text-primary hover:underline disabled:opacity-50"
+          >
+            {markAllMut.isPending ? "Marking..." : "Mark all as read"}
+          </button>
+        )}
       </div>
 
       {items.length === 0 ? (
@@ -30,24 +48,27 @@ const Notifications = () => {
         </div>
       ) : (
         <ul className="mt-6 divide-y divide-border rounded-2xl border border-border bg-card">
-          {items.map((n) => (
+          {items.map((n: any) => (
             <li key={n.id}>
               <button
-                onClick={() => markOne(n.id)}
-                className="flex w-full items-start gap-3 px-5 py-4 text-left hover:bg-secondary/50"
+                onClick={() => !n.read && markOne(n.id)}
+                disabled={n.read || markReadMut.isPending}
+                className="flex w-full items-start gap-3 px-5 py-4 text-left hover:bg-secondary/50 disabled:cursor-default"
               >
                 <span
                   className={
                     "mt-1.5 h-2 w-2 shrink-0 rounded-full " +
-                    (n.unread ? "bg-primary" : "bg-transparent")
+                    (!n.read ? "bg-primary" : "bg-transparent")
                   }
                 />
                 <div className="flex-1">
                   <div className="flex items-center justify-between gap-3">
-                    <span className={"text-sm " + (n.unread ? "font-semibold" : "font-medium")}>
+                    <span className={"text-sm " + (!n.read ? "font-semibold" : "font-medium")}>
                       {n.title}
                     </span>
-                    <span className="text-xs text-muted-foreground">{n.ts}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(n.createdAt).toLocaleDateString()}
+                    </span>
                   </div>
                   <p className="mt-0.5 text-sm text-muted-foreground">{n.detail}</p>
                 </div>
