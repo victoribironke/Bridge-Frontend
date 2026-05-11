@@ -1,42 +1,52 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
-  investorActivity,
-  investorSummary,
-  listingCards,
-  formatNaira,
-  SECTORS,
-  type ListingCard,
-} from "@/lib/mock-data";
-import { PAGES } from "@/lib/constants";
+  useInvestorSummary,
+  useInvestorActivity,
+  useInvestorMatchedListings,
+  useListings,
+} from "@/hooks/queries";
+import { formatNaira } from "@/lib/utils";
+import { PAGES, SECTORS } from "@/lib/constants";
+import { Loader2 } from "lucide-react";
 
 const InvestorDashboard = () => {
   const [tab, setTab] = useState<"foryou" | "all">("foryou");
+  const { data: summary, isLoading: isSummaryLoading } = useInvestorSummary();
+  const { data: activity, isLoading: isActivityLoading } = useInvestorActivity();
+
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
       <h1 className="font-display text-3xl">Welcome back</h1>
 
       <section className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-        {[
-          {
-            label: "Capital deployed",
-            value: formatNaira(investorSummary.totalDeployed),
-          },
-          {
-            label: "Returns received",
-            value: formatNaira(investorSummary.totalReturns),
-          },
-          { label: "Active deals", value: String(investorSummary.activeDeals) },
-          {
-            label: "Default pool balance",
-            value: formatNaira(investorSummary.defaultPoolBalance),
-          },
-        ].map((s) => (
-          <div key={s.label} className="rounded-2xl border border-border bg-card p-5">
-            <div className="font-display text-2xl">{s.value}</div>
-            <div className="mt-1 text-xs text-muted-foreground">{s.label}</div>
+        {isSummaryLoading || !summary ? (
+          <div className="col-span-full flex justify-center py-6">
+            <Loader2 className="animate-spin text-primary" />
           </div>
-        ))}
+        ) : (
+          [
+            {
+              label: "Capital deployed",
+              value: formatNaira(summary.totalDeployedKobo),
+            },
+            {
+              label: "Returns received",
+              value: formatNaira(summary.totalReturnsReceivedKobo),
+            },
+            { label: "Active deals", value: String(summary.activeDealsCount) },
+            {
+              label: "Default pool balance",
+              value: formatNaira(summary.defaultPoolBalanceKobo),
+            },
+          ].map((s) => (
+            <div key={s.label} className="rounded-2xl border border-border bg-card p-5">
+              <div className="font-display text-2xl">{s.value}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{s.label}</div>
+            </div>
+          ))
+        )}
       </section>
 
       <section className="mt-6 rounded-2xl border border-border bg-card p-6">
@@ -46,17 +56,27 @@ const InvestorDashboard = () => {
             All notifications →
           </Link>
         </div>
-        <ul className="mt-4 divide-y divide-border">
-          {investorActivity.map((a) => (
-            <li key={a.id} className="flex items-center justify-between py-3 text-sm">
-              <div>
-                <div className="font-medium">{a.title}</div>
-                <div className="text-muted-foreground">{a.detail}</div>
-              </div>
-              <span className="text-xs text-muted-foreground">{a.ts}</span>
-            </li>
-          ))}
-        </ul>
+        {isActivityLoading || !activity ? (
+          <div className="flex justify-center py-6">
+            <Loader2 className="animate-spin text-primary" />
+          </div>
+        ) : activity.length === 0 ? (
+          <div className="py-6 text-sm text-muted-foreground">No recent activity.</div>
+        ) : (
+          <ul className="mt-4 divide-y divide-border">
+            {activity.slice(0, 5).map((a: any) => (
+              <li key={a.id} className="flex items-center justify-between py-3 text-sm">
+                <div>
+                  <div className="font-medium">{a.title}</div>
+                  <div className="text-muted-foreground">{a.detail}</div>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(a.createdAt).toLocaleDateString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="mt-10">
@@ -94,8 +114,18 @@ const InvestorDashboard = () => {
 };
 
 const ForYou = () => {
-  // Mocked matched ranking: top 3 from cards
-  const matched = listingCards.slice(0, 4);
+  const { data: matchedData, isLoading } = useInvestorMatchedListings();
+
+  if (isLoading) {
+    return (
+      <div className="mt-6 flex justify-center py-10">
+        <Loader2 className="animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const matched = matchedData?.data || [];
+
   if (matched.length === 0) {
     return (
       <div className="mt-6 rounded-2xl border border-dashed border-border p-10 text-center">
@@ -111,7 +141,7 @@ const ForYou = () => {
   }
   return (
     <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-      {matched.map((l) => (
+      {matched.map((l: any) => (
         <Card key={l.id} l={l} />
       ))}
     </div>
@@ -122,26 +152,18 @@ const AllListings = () => {
   const [sector, setSector] = useState<string[]>([]);
   const [tier, setTier] = useState<string>("");
   const [standing, setStanding] = useState<string[]>([]);
-  const [sort, setSort] = useState("best");
+  const [sort, setSort] = useState("newest");
 
-  const filtered = useMemo(() => {
-    let data = listingCards.slice();
-    if (sector.length) data = data.filter((d) => sector.includes(d.sector));
-    if (tier) data = data.filter((d) => d.tier === tier);
-    if (standing.length) data = data.filter((d) => standing.includes(d.standing));
-    switch (sort) {
-      case "return":
-        data.sort((a, b) => b.targetReturnPct - a.targetReturnPct);
-        break;
-      case "rating":
-        data.sort((a, b) => a.standing.localeCompare(b.standing));
-        break;
-      case "newest":
-        data.reverse();
-        break;
-    }
-    return data;
-  }, [sector, tier, standing, sort]);
+  // Format params for the API hook
+  const params: Record<string, string> = {};
+  if (sector.length) params.sector = sector.join(",");
+  if (tier) params.tier = tier;
+  if (standing.length) params.standing = standing.join(",");
+  if (sort) params.sort = sort;
+
+  const { data, isLoading } = useListings(params);
+
+  const filtered = data?.data || [];
 
   const toggle = (arr: string[], v: string, set: (a: string[]) => void) =>
     set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
@@ -176,7 +198,7 @@ const AllListings = () => {
               Tier
             </div>
             <div className="mt-2 flex gap-1.5">
-              {["", "Tier 1", "Tier 2", "Tier 3"].map((t) => (
+              {["", "1", "2", "3"].map((t) => (
                 <button
                   key={t || "all"}
                   onClick={() => setTier(t)}
@@ -187,7 +209,7 @@ const AllListings = () => {
                       : "border-border")
                   }
                 >
-                  {t || "Any"}
+                  {t ? `Tier ${t}` : "Any"}
                 </button>
               ))}
             </div>
@@ -219,7 +241,7 @@ const AllListings = () => {
             {sector.map((s) => (
               <Tag key={s} label={s} onRemove={() => toggle(sector, s, setSector)} />
             ))}
-            {tier && <Tag label={tier} onRemove={() => setTier("")} />}
+            {tier && <Tag label={`Tier ${tier}`} onRemove={() => setTier("")} />}
             {standing.map((s) => (
               <Tag key={s} label={s} onRemove={() => toggle(standing, s, setStanding)} />
             ))}
@@ -231,22 +253,25 @@ const AllListings = () => {
               onChange={(e) => setSort(e.target.value)}
               className="rounded-md border border-input bg-background px-2 py-1 text-xs"
             >
-              <option value="best">Best match</option>
-              <option value="return">Highest return</option>
-              <option value="rating">Highest Bridge Rating</option>
+              <option value="highest_bridge_rating">Highest Bridge Rating</option>
+              <option value="highest_return">Highest return</option>
               <option value="newest">Newest</option>
             </select>
           </label>
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {isLoading ? (
+        <div className="flex justify-center py-10">
+          <Loader2 className="animate-spin text-primary" />
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
           No listings match those filters.
         </div>
       ) : (
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((l) => (
+          {filtered.map((l: any) => (
             <Card key={l.id} l={l} />
           ))}
         </div>
@@ -266,7 +291,13 @@ const Tag = ({ label, onRemove }: { label: string; onRemove: () => void }) => {
   );
 };
 
-const Card = ({ l }: { l: ListingCard }) => {
+const Card = ({ l }: { l: any }) => {
+  const sector = l.business_profiles?.sector || "Sector";
+  const tier = l.business_profiles?.tier || "1";
+  const standing = l.bridge_ratings?.overallStanding || "Seed";
+  const businessName = l.business_profiles?.businessName || "Business";
+  const narrative = l.aiProfile?.narrative?.[0] || l.useOfFunds || "";
+
   return (
     <Link
       to={PAGES.LISTINGS_ID}
@@ -275,17 +306,17 @@ const Card = ({ l }: { l: ListingCard }) => {
     >
       <div className="flex items-center gap-1.5 text-xs">
         <span className="rounded-full border border-border px-2 py-0.5 text-muted-foreground">
-          {l.sector}
+          {sector}
         </span>
-        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">{l.tier}</span>
-        <span className="ml-auto text-muted-foreground">{l.standing}</span>
+        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">Tier {tier}</span>
+        <span className="ml-auto text-muted-foreground">{standing}</span>
       </div>
-      <h3 className="mt-3 font-display text-xl">{l.business}</h3>
-      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{l.excerpt}</p>
+      <h3 className="mt-3 font-display text-xl">{businessName}</h3>
+      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{narrative}</p>
       <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-4 text-xs">
         <Stat label="Capital" value={formatNaira(l.capitalRequested)} />
-        <Stat label="Rev share" value={`${l.revenueSharePct}%`} />
-        <Stat label="Return" value={`${l.targetReturnPct}%`} />
+        <Stat label="Rev share" value={`${l.revenueSharePercent}%`} />
+        <Stat label="Return" value={`${l.totalReturnPercent}%`} />
       </div>
     </Link>
   );
