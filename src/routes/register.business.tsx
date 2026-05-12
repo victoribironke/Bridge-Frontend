@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Field,
   FormShell,
@@ -18,6 +18,99 @@ import { useRegisterBusinessMutation, useConnectBankMutation } from "@/hooks/mut
 import { useBusinessProfile } from "@/hooks/queries";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+
+const MONO_CONNECT_SCRIPT_ID = "mono-connect-script";
+const MONO_CONNECT_SCRIPT_SRC = "https://connect.withmono.com/connect.js";
+const MONO_PUBLIC_KEY = import.meta.env.VITE_MONO_PUBLIC_KEY || "test_pk_mvr35xxyg23ekjxo2u69";
+
+type MonoConnectSuccessPayload = {
+  code?: string;
+};
+
+type MonoConnectOptions = {
+  key: string;
+  scope: "auth";
+  data?: {
+    customer?: {
+      name?: string;
+      email?: string;
+    };
+  };
+  onLoad?: () => void;
+  onSuccess?: (payload: MonoConnectSuccessPayload) => void;
+  onClose?: () => void;
+};
+
+type MonoConnectInstance = {
+  setup: () => void;
+  open: () => void;
+};
+
+type MonoConnectConstructor = new (options: MonoConnectOptions) => MonoConnectInstance;
+
+declare global {
+  interface Window {
+    Connect?: MonoConnectConstructor;
+  }
+}
+
+let monoConnectScriptPromise: Promise<void> | null = null;
+
+const loadMonoConnectScript = () => {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return Promise.reject(new Error("Mono Connect can only be loaded in the browser."));
+  }
+
+  if (window.Connect) {
+    return Promise.resolve();
+  }
+
+  if (monoConnectScriptPromise) {
+    return monoConnectScriptPromise;
+  }
+
+  monoConnectScriptPromise = new Promise<void>((resolve, reject) => {
+    const existingScript = document.getElementById(
+      MONO_CONNECT_SCRIPT_ID,
+    ) as HTMLScriptElement | null;
+
+    const handleLoad = (script: HTMLScriptElement) => {
+      script.dataset.loaded = "true";
+      if (window.Connect) {
+        resolve();
+      } else {
+        monoConnectScriptPromise = null;
+        reject(new Error("Mono Connect loaded but was not available."));
+      }
+    };
+
+    const handleError = () => {
+      monoConnectScriptPromise = null;
+      reject(new Error("Failed to load Mono Connect."));
+    };
+
+    if (existingScript) {
+      if (existingScript.dataset.loaded === "true") {
+        handleLoad(existingScript);
+        return;
+      }
+
+      existingScript.addEventListener("load", () => handleLoad(existingScript), { once: true });
+      existingScript.addEventListener("error", handleError, { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = MONO_CONNECT_SCRIPT_ID;
+    script.src = MONO_CONNECT_SCRIPT_SRC;
+    script.async = true;
+    script.addEventListener("load", () => handleLoad(script), { once: true });
+    script.addEventListener("error", handleError, { once: true });
+    document.head.appendChild(script);
+  });
+
+  return monoConnectScriptPromise;
+};
 
 const STEPS = ["Personal", "BVN", "Business", "Bank", "Done"];
 
@@ -48,16 +141,116 @@ const BusinessRegister = () => {
   });
 
   const [bankData, setBankData] = useState<any>(null);
+  const [monoStatus, setMonoStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [isMonoOpening, setIsMonoOpening] = useState(false);
+  const monoConnectRef = useRef<MonoConnectInstance | null>(null);
+  const isMountedRef = useRef(false);
 
-  const { data: profileData } = useBusinessProfile();
+  const { data: profileData, refetch: refetchBusinessProfile } = useBusinessProfile();
+  const connectBankMutationRef = useRef(connectMut.mutate);
+  const refetchBusinessProfileRef = useRef(refetchBusinessProfile);
 
   const monoInflow = (profileData as any)?.business_profiles?.monoAverageMonthlyInflow;
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    connectBankMutationRef.current = connectMut.mutate;
+  }, [connectMut.mutate]);
+
+  useEffect(() => {
+    refetchBusinessProfileRef.current = refetchBusinessProfile;
+  }, [refetchBusinessProfile]);
 
   useEffect(() => {
     if (bankData && !bankData.analyzed && monoInflow != null) {
       setBankData({ ...bankData, analyzed: true, inflow: monoInflow / 100 });
     }
   }, [monoInflow, bankData]);
+
+  useEffect(() => {
+    if (!bankData || bankData.analyzed) return;
+
+    const pollId = window.setInterval(() => {
+      refetchBusinessProfile();
+    }, 5000);
+
+    return () => window.clearInterval(pollId);
+  }, [bankData, refetchBusinessProfile]);
+
+  useEffect(() => {
+    if (step !== 3 || bankData || monoConnectRef.current) return;
+
+    if (!MONO_PUBLIC_KEY) {
+      setMonoStatus("error");
+      toast.error("Mono public key is not configured.");
+      return;
+    }
+
+    setMonoStatus("loading");
+
+    loadMonoConnectScript()
+      .then(() => {
+        if (!isMountedRef.current) return;
+
+        const ConnectConstructor = window.Connect;
+        if (!ConnectConstructor) {
+          throw new Error("Mono Connect is unavailable after loading.");
+        }
+
+        const connect = new ConnectConstructor({
+          key: MONO_PUBLIC_KEY,
+          scope: "auth",
+          data: {
+            customer: {
+              name: personal.name || "Bridge Business User",
+              email: personal.email || "test@bridge.com",
+            },
+          },
+          onLoad: () => {
+            if (isMountedRef.current) {
+              setMonoStatus("ready");
+            }
+          },
+          onSuccess: ({ code }) => {
+            setIsMonoOpening(false);
+
+            if (!code) {
+              toast.error("Mono did not return a connection code. Please try again.");
+              return;
+            }
+
+            connectBankMutationRef.current(code, {
+              onSuccess: () => {
+                setBankData({ provider: "Mono", analyzed: false });
+                refetchBusinessProfileRef.current();
+                toast.success("Bank connected. We're analyzing your inflows.");
+              },
+              onError: (err) => {
+                toast.error(err.message || "Failed to connect bank account.");
+              },
+            });
+          },
+          onClose: () => {
+            setIsMonoOpening(false);
+          },
+        });
+
+        monoConnectRef.current = connect;
+        connect.setup();
+      })
+      .catch((err) => {
+        if (isMountedRef.current) {
+          setMonoStatus("error");
+          toast.error(err.message || "Failed to load Mono Connect.");
+        }
+      });
+  }, [bankData, personal.email, personal.name, step]);
 
   const phoneOk = /^(?:\+234|0)[789]\d{9}$/.test(personal.phone);
   const passwordOk = personal.password.length >= 8;
@@ -89,19 +282,19 @@ const BusinessRegister = () => {
     );
   };
 
-  const handleConnectBank = async (provider: string) => {
-    // In a real app, this would open the Mono or Okra widget.
-    // For now, we simulate getting a success code and sending it to the backend.
-    const fakeCode = "mono_auth_code_12345";
+  const handleConnectBank = () => {
+    if (monoStatus !== "ready" || !monoConnectRef.current) {
+      toast.error("Mono Connect is still loading. Please try again in a moment.");
+      return;
+    }
 
-    connectMut.mutate(fakeCode, {
-      onSuccess: () => {
-        setBankData({ provider, analyzed: false });
-      },
-      onError: (err) => {
-        toast.error(err.message || "Failed to connect bank account.");
-      },
-    });
+    try {
+      setIsMonoOpening(true);
+      monoConnectRef.current.open();
+    } catch (err: any) {
+      setIsMonoOpening(false);
+      toast.error(err.message || "Failed to open Mono Connect.");
+    }
   };
 
   return (
@@ -278,19 +471,28 @@ const BusinessRegister = () => {
           >
             {!bankData ? (
               <div className="rounded-xl border border-dashed border-border p-6">
-                <div className="text-sm font-medium">Choose a provider</div>
-                <div className="mt-3 flex gap-3">
-                  {["Mono", "Okra"].map((p) => (
-                    <button
-                      key={p}
-                      disabled={connectMut.isPending}
-                      onClick={() => handleConnectBank(p)}
-                      className="flex-1 rounded-md border border-input px-4 py-3 text-sm font-medium hover:bg-secondary disabled:opacity-50 flex justify-center items-center"
-                    >
-                      {connectMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : p}
-                    </button>
-                  ))}
-                </div>
+                <div className="text-sm font-medium">Secure bank verification</div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Connect securely with Mono so we can verify your average monthly inflow.
+                </p>
+                <PrimaryBtn
+                  disabled={monoStatus !== "ready" || connectMut.isPending || isMonoOpening}
+                  onClick={handleConnectBank}
+                  className="mt-4 w-full"
+                >
+                  {connectMut.isPending || isMonoOpening || monoStatus === "loading" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : monoStatus === "error" ? (
+                    "Unable to load Mono"
+                  ) : (
+                    "Connect"
+                  )}
+                </PrimaryBtn>
+                {monoStatus === "error" && (
+                  <p className="mt-3 text-xs text-destructive">
+                    Mono Connect could not be loaded. Refresh the page and try again.
+                  </p>
+                )}
               </div>
             ) : !bankData.analyzed ? (
               <div className="rounded-xl border border-warning/40 bg-warning/10 p-5 text-sm">
