@@ -63,6 +63,7 @@ const ListingDetailPage = () => {
   };
 
   const businessName = listing.business_profiles?.businessName || "Business";
+  const businessUserId = listing.business_profiles?.userId;
   const sector = listing.business_profiles?.sector || "Sector";
   const tier = listing.business_profiles?.tier || "1";
   const standing = listing.bridge_ratings?.overallStanding || "Seed";
@@ -84,13 +85,28 @@ const ListingDetailPage = () => {
       </Link>
 
       <header className="mt-6 rounded-3xl border border-border bg-card p-8">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-full border border-border px-2 py-0.5 text-muted-foreground">
-            {sector}
-          </span>
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">Tier {tier}</span>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-full border border-border px-2 py-0.5 text-muted-foreground">
+                {sector}
+              </span>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">
+                Tier {tier}
+              </span>
+            </div>
+            <h1 className="mt-3 font-display text-4xl md:text-5xl">{businessName}</h1>
+          </div>
+          {businessUserId && (
+            <Link
+              to={PAGES.BUSINESS_ID}
+              params={{ id: businessUserId }}
+              className="rounded-xl border border-input bg-background px-4 py-2 text-xs font-medium text-primary hover:bg-secondary transition-colors"
+            >
+              View business profile →
+            </Link>
+          )}
         </div>
-        <h1 className="mt-4 font-display text-4xl md:text-5xl">{businessName}</h1>
         <div className="mt-6 inline-flex items-center gap-3 rounded-2xl bg-primary px-5 py-3 text-primary-foreground">
           <span className="text-xs uppercase tracking-wider opacity-80">Bridge Rating</span>
           <span className="font-display text-2xl">{standing}</span>
