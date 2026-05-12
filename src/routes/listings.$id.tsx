@@ -9,6 +9,22 @@ import { PAGES } from "@/lib/constants";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+const normalizeListingResponse = (response: any) => {
+  if (!response) return null;
+
+  if (response.listings) {
+    return {
+      ...response.listings,
+      business_profiles: response.business_profiles,
+      bridge_ratings: response.bridge_ratings,
+      tranches: response.tranches,
+      businessSquadVirtualAccountNumber: response.businessSquadVirtualAccountNumber,
+    };
+  }
+
+  return response;
+};
+
 const parseAiProfile = (aiProfile: any) => {
   if (!aiProfile) return null;
 
@@ -93,7 +109,8 @@ const getTrustSignals = (listing: any, aiProfile: any) => {
 
 const ListingDetailPage = () => {
   const { id } = Route.useParams();
-  const { data: listing, isLoading } = useListingDetail(id);
+  const { data: listingResponse, isLoading } = useListingDetail(id);
+  const listing = useMemo(() => normalizeListingResponse(listingResponse), [listingResponse]);
   const { userType: role } = useAuth();
   const navigate = useNavigate();
   const [amount, setAmount] = useState<number>(50_000);
