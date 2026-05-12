@@ -17,12 +17,19 @@ export const PAGES = {
 } as const;
 
 export const SECTORS = [
+  "Food & Beverage",
   "Agriculture",
-  "Retail",
   "Technology",
-  "Logistics",
-  "Healthcare",
+  "Fashion & Beauty",
+  "Health & Wellness",
+  "Education",
+  "Transport & Logistics",
+  "Retail & Trade",
   "Manufacturing",
-  "Services",
   "Real Estate",
+  "Finance & Insurance",
+  "Entertainment & Media",
+  "Construction",
+  "Energy",
+  "Other",
 ];
