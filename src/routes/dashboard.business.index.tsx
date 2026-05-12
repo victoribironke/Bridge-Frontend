@@ -7,6 +7,7 @@ import {
   useBusinessActiveListing,
   useBusinessActivity,
   useBusinessRevenueChart,
+  useBusinessRating,
 } from "@/hooks/queries";
 import { formatNaira } from "@/lib/utils";
 import { PAGES } from "@/lib/constants";
@@ -20,6 +21,9 @@ const BusinessDashboard = () => {
   const { data: activeListing, isLoading: isListingLoading } = useBusinessActiveListing();
   const { data: activity, isLoading: isActivityLoading } = useBusinessActivity();
   const repayMut = useRepayMutation();
+  const businessProfile = (profileData as any)?.business_profiles || {};
+  const businessProfileId = businessProfile.id as string | undefined;
+  const { data: ratingData, isLoading: isRatingLoading } = useBusinessRating(businessProfileId);
 
   if (isProfileLoading) {
     return (
@@ -40,11 +44,13 @@ const BusinessDashboard = () => {
     });
   };
 
-  const businessProfile = (profileData as any)?.business_profiles || {};
-  const rating = (profileData as any)?.bridge_ratings || { overallStanding: "Seed", score: 0 };
-
-  // Calculate rating percentage assuming max score is 1000
-  const ratingPct = Math.min(100, Math.max(0, (rating.score / 1000) * 100));
+  const profileRating = (profileData as any)?.bridge_ratings;
+  const standing =
+    ratingData?.standing || profileRating?.standing || profileRating?.overallStanding || "Seed";
+  const overallScore = Number(
+    ratingData?.overallScore || profileRating?.overallScore || profileRating?.score || 0,
+  );
+  const ratingPct = Math.min(100, Math.max(0, overallScore));
 
   const fundedPct = activeListing
     ? Math.min(
@@ -70,13 +76,15 @@ const BusinessDashboard = () => {
           <div className="text-xs uppercase tracking-wider text-muted-foreground">
             Bridge Rating
           </div>
-          <div className="mt-1 font-display text-4xl">{rating.overallStanding}</div>
-          <div className="mt-1 text-sm text-muted-foreground">Score {rating.score}</div>
+          <div className="mt-1 font-display text-4xl">
+            {isRatingLoading ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : standing}
+          </div>
+          <div className="mt-1 text-sm text-muted-foreground">{overallScore.toFixed(2)} / 100</div>
           <div className="mt-4 h-2 rounded-full bg-secondary">
             <div className="h-2 rounded-full bg-primary" style={{ width: `${ratingPct}%` }} />
           </div>
           <p className="mt-3 text-sm text-muted-foreground">
-            {rating.score < 500
+            {overallScore < 50
               ? "Increase your revenue to improve your score."
               : "Keep up the good work to reach the next standing."}
           </p>
@@ -84,7 +92,7 @@ const BusinessDashboard = () => {
         <div className="rounded-2xl border border-border bg-card p-6">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">Tier</div>
           <div className="mt-1 inline-flex items-center gap-2">
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-primary font-display text-lg">
+            <span className="rounded-md bg-primary/10 px-3 py-1 text-primary font-sans text-sm">
               Tier {businessProfile.tier || 1}
             </span>
           </div>
@@ -185,8 +193,8 @@ const BusinessDashboard = () => {
           </div>
         ) : (
           <>
-            <Stat label="Total raised" value={formatNaira(stats?.totalRaisedKobo || 0)} />
-            <Stat label="Total swept" value={formatNaira(stats?.totalSweptKobo || 0)} />
+            <Stat label="Total raised" value={formatNaira(stats?.totalCapitalRaised || 0)} />
+            <Stat label="Total swept" value={formatNaira(stats?.totalSweptToInvestors || 0)} />
             <Stat label="Completed deals" value={String(stats?.completedDealsCount || 0)} />
           </>
         )}
@@ -291,10 +299,10 @@ const BusinessChartsSection = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="font-display text-xl text-foreground">Revenue & sweep analytics</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          {/* <p className="text-xs text-muted-foreground mt-0.5">
             Chronological multi-dimensional visualization of gross inflows and automated
             distributions
-          </p>
+          </p> */}
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <select
