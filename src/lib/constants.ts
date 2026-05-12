@@ -1,4 +1,5 @@
 export const BACKEND_URL = "https://bridge-backend-black.vercel.app/api/v1";
+export const BUSINESS_DASHBOARD_SNAPSHOT_KEY = "bridge.businessDashboardSnapshot";
 
 export const PAGES = {
   HOME: "/",
