@@ -26,7 +26,7 @@ const RISK = [
   {
     id: "balanced",
     label: "Balanced",
-    desc: "Mix of growth and established businesses. Target 18-24% annual returns.",
+    desc: "Mix of growth and established businesses.",
   },
   {
     id: "growth",
@@ -102,7 +102,7 @@ const RegisterInvestor = () => {
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">
-      <h1 className="mb-8 font-display text-3xl">Investor sign up</h1>
+      <h1 className="mb-8 font-display text-3xl">Investor registration</h1>
       <Stepper steps={STEPS} current={step} />
 
       <div className="mt-8">
