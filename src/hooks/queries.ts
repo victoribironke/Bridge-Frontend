@@ -53,6 +53,7 @@ export const usePreviewTerms = (
         body: { capitalRequested, preferredRepaymentMonths },
       }),
     enabled: enabled && !!capitalRequested && capitalRequested > 0,
+    retry: false,
   });
 };
 
@@ -113,12 +114,12 @@ export const useInvestorDeals = (status?: "active" | "completed" | "defaulted") 
 };
 
 // BUSINESS
-export const useBusinessProfile = () => {
+export const useBusinessProfile = (enabled = true) => {
   const userId = useUserId();
   return useQuery({
     queryKey: ["business-profile", userId],
     queryFn: () => apiFetch<any>(`/business/${userId}/profile`),
-    enabled: !!userId,
+    enabled: enabled && !!userId,
     staleTime: DASHBOARD_STALE_TIME,
   });
 };
