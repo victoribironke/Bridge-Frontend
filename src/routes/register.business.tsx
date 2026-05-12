@@ -459,7 +459,7 @@ const BusinessRegister = () => {
         {step === 3 && (
           <FormShell
             title="Connect your bank account"
-            subtitle="We read 12+ months of inflows so investors see a real picture of your business."
+            subtitle="We read your inflows so investors see a real picture of your business."
             footer={
               <>
                 <span />
@@ -501,15 +501,14 @@ const BusinessRegister = () => {
                   Analyzing bank data...
                 </div>
                 <div className="mt-2 text-muted-foreground">
-                  Linked via {bankData.provider}. We are currently processing 12+ months of inflows.
-                  This usually takes under a minute.
+                  We are currently processing inflows. This usually takes under a minute.
                 </div>
               </div>
             ) : (
               <div className="rounded-xl border border-success/40 bg-success/10 p-5 text-sm">
                 <div className="font-medium text-success">✓ Bank connected</div>
                 <div className="mt-2 text-muted-foreground">
-                  Linked via {bankData.provider}. Analyzed average monthly inflow:{" "}
+                  Analyzed average monthly inflow:{" "}
                   <span className="font-medium text-foreground">
                     {formatNairaFull(bankData.inflow * 100)}
                   </span>
