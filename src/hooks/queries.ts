@@ -187,3 +187,33 @@ export const useNotifications = () => {
     enabled: userType !== "guest",
   });
 };
+
+export const useBusinessRevenueChart = (period: string, year?: number, month?: number) => {
+  const userId = useUserId();
+  return useQuery({
+    queryKey: ["business-revenue-chart", userId, period, year, month],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.append("period", period);
+      if (year) params.append("year", year.toString());
+      if (month) params.append("month", month.toString());
+      return apiFetch<any>(`/business/${userId}/revenue?${params.toString()}`);
+    },
+    enabled: !!userId,
+  });
+};
+
+export const useInvestorPerformanceChart = (period: string, year?: number, month?: number) => {
+  const userId = useUserId();
+  return useQuery({
+    queryKey: ["investor-performance-chart", userId, period, year, month],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.append("period", period);
+      if (year) params.append("year", year.toString());
+      if (month) params.append("month", month.toString());
+      return apiFetch<any>(`/investor/${userId}/performance?${params.toString()}`);
+    },
+    enabled: !!userId,
+  });
+};
