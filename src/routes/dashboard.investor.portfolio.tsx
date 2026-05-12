@@ -469,6 +469,39 @@ const InvestorChartsSection = () => {
   const maxCap = Math.max(...rawData.map((d: any) => d.totalCapital || 0), 1000000);
   const maxRet = Math.max(...rawData.map((d: any) => d.totalReturns || 0), 100000);
 
+  type ChartPoint = {
+    x: number;
+    y: number;
+    val: number;
+    label: string;
+  };
+
+  // Helper to compute SVG points
+  const getChartPoints = (key: string, maxVal: number): ChartPoint[] => {
+    const len = rawData.length;
+    return rawData.map((d: any, idx: number) => {
+      const val = d[key] || 0;
+      const x = 30 + (idx / Math.max(1, len - 1)) * 340;
+      const y = 130 - (val / maxVal) * 100;
+      return { x, y, val, label: d.label.replace("2025-", "").replace("2026-", "") };
+    });
+  };
+
+  const capPoints = getChartPoints("totalCapital", maxCap);
+  const retPoints = getChartPoints("totalReturns", maxRet);
+
+  const capPolylineStr = capPoints.map((p) => `${p.x},${p.y}`).join(" ");
+  const capAreaStr =
+    capPoints.length > 0
+      ? `${capPoints[0].x},130 ${capPolylineStr} ${capPoints[capPoints.length - 1].x},130`
+      : "";
+
+  const retPolylineStr = retPoints.map((p) => `${p.x},${p.y}`).join(" ");
+  const retAreaStr =
+    retPoints.length > 0
+      ? `${retPoints[0].x},130 ${retPolylineStr} ${retPoints[retPoints.length - 1].x},130`
+      : "";
+
   return (
     <section className="mt-10 rounded-3xl border border-border bg-card p-6 shadow-xl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -507,67 +540,193 @@ const InvestorChartsSection = () => {
         </div>
       ) : (
         <div className="mt-8 grid gap-8 md:grid-cols-2">
-          {/* Capital over time chart */}
-          <div className="rounded-2xl border border-border/50 bg-secondary/10 p-4 relative overflow-hidden group">
+          {/* Capital over time line chart */}
+          <div className="rounded-2xl border border-border/50 bg-secondary/10 p-4 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
               Capital over time
             </div>
 
-            <div className="mt-6 flex items-end gap-3 h-48 pt-4">
-              {rawData.map((d: any, idx: number) => {
-                const heightPct = Math.max(((d.totalCapital || 0) / maxCap) * 100, 8);
-                return (
-                  <div
-                    key={idx}
-                    className="flex-1 flex flex-col items-center gap-2 h-full justify-end"
-                  >
-                    <div
-                      className="w-full bg-linear-to-t from-primary/40 to-primary rounded-t-lg transition-all duration-500 group-hover:opacity-90 relative"
-                      style={{ height: `${heightPct}%` }}
-                    >
-                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-foreground text-background text-[10px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap shadow-md z-10">
-                        {formatNaira(d.totalCapital || 0)}
-                      </div>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground truncate max-w-full">
-                      {d.label.replace("2025-", "").replace("2026-", "")}
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="relative w-full pt-2">
+              <svg viewBox="0 0 400 160" className="w-full h-auto overflow-visible">
+                <defs>
+                  <linearGradient id="capGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="0%"
+                      stopColor="var(--color-primary, #003cbb)"
+                      stopOpacity="0.25"
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="var(--color-primary, #003cbb)"
+                      stopOpacity="0.0"
+                    />
+                  </linearGradient>
+                </defs>
+
+                {/* Grid lines */}
+                <line
+                  x1="30"
+                  y1="30"
+                  x2="370"
+                  y2="30"
+                  stroke="currentColor"
+                  strokeOpacity="0.05"
+                  strokeDasharray="4 4"
+                />
+                <line
+                  x1="30"
+                  y1="80"
+                  x2="370"
+                  y2="80"
+                  stroke="currentColor"
+                  strokeOpacity="0.05"
+                  strokeDasharray="4 4"
+                />
+                <line
+                  x1="30"
+                  y1="130"
+                  x2="370"
+                  y2="130"
+                  stroke="currentColor"
+                  strokeOpacity="0.1"
+                />
+
+                {/* Area under curve */}
+                {capAreaStr && <polygon points={capAreaStr} fill="url(#capGradient)" />}
+
+                {/* Main line */}
+                {capPolylineStr && (
+                  <polyline
+                    points={capPolylineStr}
+                    fill="none"
+                    stroke="var(--color-primary, #003cbb)"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                )}
+
+                {/* Interactive points */}
+                {capPoints.map((p, idx) => (
+                  <g key={idx} className="group/point cursor-pointer">
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r="5"
+                      fill="var(--color-primary, #003cbb)"
+                      stroke="var(--color-background, #ffffff)"
+                      strokeWidth="2"
+                      className="transition-transform group-hover/point:scale-150"
+                    />
+                    <title>{`${p.label}: ${formatNaira(p.val)}`}</title>
+                  </g>
+                ))}
+              </svg>
+
+              {/* X Axis Labels */}
+              <div className="flex justify-between px-[7.5%] mt-2 text-[10px] text-muted-foreground">
+                {capPoints.map((p, idx) => (
+                  <span key={idx} className="truncate max-w-[50px] text-center">
+                    {p.label}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Return over time chart */}
-          <div className="rounded-2xl border border-border/50 bg-secondary/10 p-4 relative overflow-hidden group">
+          {/* Return over time line chart */}
+          <div className="rounded-2xl border border-border/50 bg-secondary/10 p-4 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-32 h-32 bg-success/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
               Return over time
             </div>
 
-            <div className="mt-6 flex items-end gap-3 h-48 pt-4">
-              {rawData.map((d: any, idx: number) => {
-                const heightPct = Math.max(((d.totalReturns || 0) / maxRet) * 100, 8);
-                return (
-                  <div
-                    key={idx}
-                    className="flex-1 flex flex-col items-center gap-2 h-full justify-end"
-                  >
-                    <div
-                      className="w-full bg-linear-to-t from-success/40 to-success rounded-t-lg transition-all duration-500 group-hover:opacity-90 relative"
-                      style={{ height: `${heightPct}%` }}
-                    >
-                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-foreground text-background text-[10px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap shadow-md z-10">
-                        {formatNaira(d.totalReturns || 0)}
-                      </div>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground truncate max-w-full">
-                      {d.label.replace("2025-", "").replace("2026-", "")}
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="relative w-full pt-2">
+              <svg viewBox="0 0 400 160" className="w-full h-auto overflow-visible">
+                <defs>
+                  <linearGradient id="retGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="0%"
+                      stopColor="var(--color-success, #10b981)"
+                      stopOpacity="0.25"
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="var(--color-success, #10b981)"
+                      stopOpacity="0.0"
+                    />
+                  </linearGradient>
+                </defs>
+
+                {/* Grid lines */}
+                <line
+                  x1="30"
+                  y1="30"
+                  x2="370"
+                  y2="30"
+                  stroke="currentColor"
+                  strokeOpacity="0.05"
+                  strokeDasharray="4 4"
+                />
+                <line
+                  x1="30"
+                  y1="80"
+                  x2="370"
+                  y2="80"
+                  stroke="currentColor"
+                  strokeOpacity="0.05"
+                  strokeDasharray="4 4"
+                />
+                <line
+                  x1="30"
+                  y1="130"
+                  x2="370"
+                  y2="130"
+                  stroke="currentColor"
+                  strokeOpacity="0.1"
+                />
+
+                {/* Area under curve */}
+                {retAreaStr && <polygon points={retAreaStr} fill="url(#retGradient)" />}
+
+                {/* Main line */}
+                {retPolylineStr && (
+                  <polyline
+                    points={retPolylineStr}
+                    fill="none"
+                    stroke="var(--color-success, #10b981)"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                )}
+
+                {/* Interactive points */}
+                {retPoints.map((p, idx) => (
+                  <g key={idx} className="group/point cursor-pointer">
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r="5"
+                      fill="var(--color-success, #10b981)"
+                      stroke="var(--color-background, #ffffff)"
+                      strokeWidth="2"
+                      className="transition-transform group-hover/point:scale-150"
+                    />
+                    <title>{`${p.label}: ${formatNaira(p.val)}`}</title>
+                  </g>
+                ))}
+              </svg>
+
+              {/* X Axis Labels */}
+              <div className="flex justify-between px-[7.5%] mt-2 text-[10px] text-muted-foreground">
+                {retPoints.map((p, idx) => (
+                  <span key={idx} className="truncate max-w-[50px] text-center">
+                    {p.label}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
