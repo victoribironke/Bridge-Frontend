@@ -116,6 +116,14 @@ export const useBusinessProfile = (options?: { refetchInterval?: number | false 
   });
 };
 
+export const useBusinessProfileById = (userId: string) => {
+  return useQuery({
+    queryKey: ["business-profile", userId],
+    queryFn: () => apiFetch<any>(`/business/${userId}/profile`),
+    enabled: !!userId,
+  });
+};
+
 export const useBusinessStats = () => {
   const userId = useUserId();
   return useQuery({
