@@ -13,7 +13,7 @@ import {
 } from "@/components/form-bits";
 import { SECTORS, PAGES } from "@/lib/constants";
 import { formatNairaFull } from "@/lib/utils";
-import { useAuth } from "@/lib/auth";
+
 import { useRegisterBusinessMutation, useConnectBankMutation } from "@/hooks/mutations";
 import { useBusinessProfile } from "@/hooks/queries";
 import { Loader2 } from "lucide-react";
@@ -112,12 +112,11 @@ const loadMonoConnectScript = () => {
   return monoConnectScriptPromise;
 };
 
-const STEPS = ["Personal", "BVN", "Business", "Bank", "Done"];
+const STEPS = ["Personal", "BVN", "Business", "Bank"];
 
 const BusinessRegister = () => {
   const [step, setStep] = useState(0);
   const navigate = useNavigate();
-  const { virtualAccountNumber } = useAuth();
 
   const registerMut = useRegisterBusinessMutation();
   const connectMut = useConnectBankMutation();
@@ -145,6 +144,7 @@ const BusinessRegister = () => {
   const [isMonoOpening, setIsMonoOpening] = useState(false);
   const monoConnectRef = useRef<MonoConnectInstance | null>(null);
   const isMountedRef = useRef(false);
+  const hasNavigatedAfterBankVerificationRef = useRef(false);
 
   const { data: profileData, refetch: refetchBusinessProfile } = useBusinessProfile();
   const connectBankMutationRef = useRef(connectMut.mutate);
@@ -168,10 +168,18 @@ const BusinessRegister = () => {
   }, [refetchBusinessProfile]);
 
   useEffect(() => {
-    if (bankData && !bankData.analyzed && monoInflow != null) {
+    if (
+      bankData &&
+      !bankData.analyzed &&
+      monoInflow != null &&
+      !hasNavigatedAfterBankVerificationRef.current
+    ) {
+      hasNavigatedAfterBankVerificationRef.current = true;
       setBankData({ ...bankData, analyzed: true, inflow: monoInflow / 100 });
+      toast.success("Registration complete. Welcome to your dashboard.");
+      navigate({ to: PAGES.DASHBOARD_BUSINESS });
     }
-  }, [monoInflow, bankData]);
+  }, [monoInflow, bankData, navigate]);
 
   useEffect(() => {
     if (!bankData || bankData.analyzed) return;
@@ -460,14 +468,6 @@ const BusinessRegister = () => {
           <FormShell
             title="Connect your bank account"
             subtitle="We read your inflows so investors see a real picture of your business."
-            footer={
-              <>
-                <span />
-                <PrimaryBtn disabled={!bankData || !bankData.analyzed} onClick={() => setStep(4)}>
-                  Continue
-                </PrimaryBtn>
-              </>
-            }
           >
             {!bankData ? (
               <div className="rounded-xl border border-dashed border-border p-6">
@@ -516,32 +516,6 @@ const BusinessRegister = () => {
               </div>
             )}
           </FormShell>
-        )}
-
-        {step === 4 && (
-          <div className="rounded-2xl border border-success/30 bg-success/10 p-8 text-center">
-            <h2 className="font-display text-3xl">Registration complete</h2>
-            <p className="mt-4 text-sm text-muted-foreground">
-              Your business is set up and your bank is connected. To start raising capital, you can
-              create your first listing from the dashboard.
-            </p>
-            <div className="mt-6 inline-block rounded-xl border border-border bg-card px-6 py-4">
-              <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                Payment Squad Account
-              </div>
-              <div className="mt-1 font-display text-2xl tracking-widest text-primary">
-                {virtualAccountNumber || "Pending..."}
-              </div>
-            </div>
-            <div className="mt-8">
-              <button
-                onClick={() => navigate({ to: PAGES.DASHBOARD_BUSINESS })}
-                className="rounded-md bg-primary px-5 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-              >
-                Go to dashboard
-              </button>
-            </div>
-          </div>
         )}
       </div>
     </div>
