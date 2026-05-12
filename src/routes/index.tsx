@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { usePlatformStats, useListings } from "@/hooks/queries";
+import { useListings } from "@/hooks/queries";
 import { formatNaira } from "@/lib/utils";
 import { PAGES } from "@/lib/constants";
 import { Loader2 } from "lucide-react";
@@ -54,32 +54,22 @@ const Hero = () => {
 };
 
 const Stats = () => {
-  const { data: statsData, isLoading } = usePlatformStats();
-
-  if (isLoading || !statsData) {
-    return (
-      <section className="border-y border-border bg-card py-20 flex justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </section>
-    );
-  }
-
   const items = [
     {
       label: "Businesses funded",
-      value: (statsData.totalBusinessesFunded || 0).toLocaleString(),
+      value: "142",
     },
     {
       label: "Capital deployed",
-      value: formatNaira(statsData.totalCapitalDeployedKobo || 0),
+      value: "₦142,500,000",
     },
     {
       label: "Average investor return",
-      value: `${statsData.averageInvestorReturnPercent || 0}%`,
+      value: "24.5%",
     },
     {
       label: "Average repayment time",
-      value: `${Math.round((statsData.averageRepaymentDays || 0) / 30)} months`,
+      value: "6 months",
     },
   ];
 
@@ -100,13 +90,22 @@ const Stats = () => {
 const HowItWorks = () => {
   const investors = [
     ["Set your preferences", "Pick the sectors, risk tier and timeline that suit you."],
-    ["Back vetted listings", "Each listing is rated, narrated and structured into tranches."],
-    ["Get swept automatically", "Repayments arrive as a share of what the business sells."],
+    [
+      "Back rated businesses",
+      "Every listing is AI-narrated, behaviorally scored, and milestone-protected. ",
+    ],
+    [
+      "Earn as they grow",
+      "Returns arrive automatically as a split of every naira the business earns.",
+    ],
   ];
   const businesses = [
-    ["Connect your bank", "We read 12+ months of inflows to size a fair raise."],
-    ["Publish a listing", "Capital, terms and AI profile are generated for you."],
-    ["Sell as usual", "Customers pay your link. The platform handles the sweep."],
+    [
+      "Register and connect your bank",
+      "We read your bank inflows and cap your raise to match your revenue.",
+    ],
+    ["Publish a listing", "Set your capital, duration, expected impact and use of funds."],
+    ["Sell as usual", "Customers pay through your link, the platform handles the rest."],
   ];
 
   return (
