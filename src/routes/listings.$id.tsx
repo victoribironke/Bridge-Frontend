@@ -243,13 +243,13 @@ const ListingDetailPage = () => {
         </div>
       </header>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
-        <div className="space-y-8">
-          <section className="rounded-2xl border border-border bg-card p-8">
+      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-8">
+          <section className="min-w-0 rounded-2xl border border-border bg-card p-8">
             <h2 className="font-display text-2xl">The story</h2>
-            <div className="prose prose-sm mt-4 max-w-none text-foreground/90">
+            <div className="prose prose-sm mt-4 max-w-none wrap-anywhere text-foreground/90">
               {story.map((p: string, i: number) => (
-                <p key={i} className="mt-4 leading-relaxed">
+                <p key={i} className="mt-4 wrap-anywhere leading-relaxed">
                   {p}
                 </p>
               ))}
@@ -260,7 +260,7 @@ const ListingDetailPage = () => {
                   Flagged by AI
                 </div>
                 {flaggedNotes.map((n: string, i: number) => (
-                  <p key={i} className="mt-2 text-sm">
+                  <p key={i} className="mt-2 wrap-anywhere text-sm">
                     {n}
                   </p>
                 ))}
