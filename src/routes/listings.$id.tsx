@@ -9,6 +9,88 @@ import { PAGES } from "@/lib/constants";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+const parseAiProfile = (aiProfile: any) => {
+  if (!aiProfile) return null;
+
+  if (typeof aiProfile === "object") return aiProfile;
+
+  if (typeof aiProfile === "string") {
+    try {
+      return JSON.parse(aiProfile);
+    } catch (e) {
+      return { narrative: aiProfile };
+    }
+  }
+
+  return null;
+};
+
+const toParagraphs = (value: any) => {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === "string") {
+    return value
+      .split(/\n+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
+const getRatingBreakdown = (rating: any) => {
+  if (!rating) return [];
+
+  if (Array.isArray(rating.components)) return rating.components;
+
+  return [
+    { label: "Repayment speed", contribution: Number(rating.repaymentSpeedScore || 0) },
+    { label: "Repayment consistency", contribution: Number(rating.repaymentConsistencyScore || 0) },
+    { label: "Transaction volume", contribution: Number(rating.transactionVolumeScore || 0) },
+    { label: "Revenue consistency", contribution: Number(rating.revenueConsistencyScore || 0) },
+    { label: "CAC bonus", contribution: Number(rating.cacBonusScore || 0) },
+    { label: "Communication", contribution: Number(rating.communicationScore || 0) },
+  ].filter((component) => component.contribution > 0);
+};
+
+const getTrancheDisplay = (listing: any, aiProfile: any) => {
+  if (Array.isArray(listing.tranches) && listing.tranches.length > 0) {
+    return listing.tranches.map((tranche: any) => ({
+      label: `Tranche ${tranche.trancheNumber}`,
+      amount: tranche.amount,
+      condition: tranche.releaseCondition,
+      released: tranche.status === "released" || !!tranche.releasedAt,
+    }));
+  }
+
+  return aiProfile?.tranches || [];
+};
+
+const getTrustSignals = (listing: any, aiProfile: any) => {
+  if (Array.isArray(aiProfile?.trustSignals) && aiProfile.trustSignals.length > 0) {
+    return aiProfile.trustSignals;
+  }
+
+  const business = listing.business_profiles;
+  return [
+    {
+      label: "Bank data",
+      detail: business?.monoAverageMonthlyInflow ? "Mono verified inflows" : "Connection pending",
+      status: business?.monoAverageMonthlyInflow ? "pass" : "warning",
+    },
+    {
+      label: "CAC verification",
+      detail: business?.cacVerified ? "Verified" : "Not verified",
+      status: business?.cacVerified ? "pass" : "warning",
+    },
+    {
+      label: "Business profile",
+      detail: business?.yearsInOperation
+        ? `${business.yearsInOperation} years in operation`
+        : business?.sector,
+      status: "pass",
+    },
+  ].filter((signal) => signal.detail);
+};
+
 const ListingDetailPage = () => {
   const { id } = Route.useParams();
   const { data: listing, isLoading } = useListingDetail(id);
@@ -20,7 +102,8 @@ const ListingDetailPage = () => {
 
   const projected = useMemo(() => {
     if (!listing) return { expected: 0, total: 0, months: 0 };
-    const expected = Math.round(amount * (listing.totalReturnPercent / 100));
+    const totalReturnPercent = Number(listing.totalReturnPercent || 0);
+    const expected = Math.round(amount * (totalReturnPercent / 100));
     return { expected, total: amount + expected, months: listing.targetRepaymentMonths };
   }, [amount, listing]);
 
@@ -66,14 +149,21 @@ const ListingDetailPage = () => {
   const businessUserId = listing.business_profiles?.userId;
   const sector = listing.business_profiles?.sector || "Sector";
   const tier = listing.business_profiles?.tier || "1";
-  const standing = listing.bridge_ratings?.overallStanding || "Seed";
-  const score = listing.bridge_ratings?.score || "N/A";
-  const components = listing.bridge_ratings?.components || [];
+  const rating = listing.bridge_ratings;
+  const standing = rating?.standing || rating?.overallStanding || "Seed";
+  const score = rating?.overallScore || rating?.score || "N/A";
+  const components = getRatingBreakdown(rating);
 
-  const narrative = listing.aiProfile?.narrative || [];
-  const flaggedNotes = listing.aiProfile?.flaggedNotes || [];
-  const tranches = listing.aiProfile?.tranches || [];
-  const trustSignals = listing.aiProfile?.trustSignals || [];
+  const aiProfile = parseAiProfile(listing.aiProfile);
+  const narrative = toParagraphs(aiProfile?.narrative || aiProfile?.summary || listing.aiProfile);
+  const fallbackNarrative = [
+    listing.useOfFunds ? `Use of funds: ${listing.useOfFunds}` : null,
+    listing.expectedImpact ? `Expected impact: ${listing.expectedImpact}` : null,
+  ].filter(Boolean) as string[];
+  const story = narrative.length > 0 ? narrative : fallbackNarrative;
+  const flaggedNotes = toParagraphs(aiProfile?.flaggedNotes);
+  const tranches = getTrancheDisplay(listing, aiProfile);
+  const trustSignals = getTrustSignals(listing, aiProfile);
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
@@ -141,7 +231,7 @@ const ListingDetailPage = () => {
           <section className="rounded-2xl border border-border bg-card p-8">
             <h2 className="font-display text-2xl">The story</h2>
             <div className="prose prose-sm mt-4 max-w-none text-foreground/90">
-              {narrative.map((p: string, i: number) => (
+              {story.map((p: string, i: number) => (
                 <p key={i} className="mt-4 leading-relaxed">
                   {p}
                 </p>
@@ -225,7 +315,7 @@ const ListingDetailPage = () => {
               </div>
               <div className="mt-6 space-y-3">
                 {components.map((c: any) => {
-                  const max = Math.max(...components.map((x: any) => x.contribution));
+                  const max = Math.max(...components.map((x: any) => x.contribution), 1);
                   const pct = (c.contribution / max) * 100;
                   return (
                     <div key={c.label}>
