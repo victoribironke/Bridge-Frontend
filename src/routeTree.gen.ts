@@ -12,9 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RegisterIndexRouteImport } from './routes/register.index'
 import { Route as RegisterInvestorRouteImport } from './routes/register.investor'
 import { Route as RegisterBusinessRouteImport } from './routes/register.business'
 import { Route as ListingsIdRouteImport } from './routes/listings.$id'
+import { Route as BusinessIdRouteImport } from './routes/business.$id'
 import { Route as DashboardInvestorIndexRouteImport } from './routes/dashboard.investor.index'
 import { Route as DashboardBusinessIndexRouteImport } from './routes/dashboard.business.index'
 import { Route as DashboardInvestorPortfolioRouteImport } from './routes/dashboard.investor.portfolio'
@@ -36,6 +38,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RegisterIndexRoute = RegisterIndexRouteImport.update({
+  id: '/register/',
+  path: '/register/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterInvestorRoute = RegisterInvestorRouteImport.update({
   id: '/register/investor',
   path: '/register/investor',
@@ -49,6 +56,11 @@ const RegisterBusinessRoute = RegisterBusinessRouteImport.update({
 const ListingsIdRoute = ListingsIdRouteImport.update({
   id: '/listings/$id',
   path: '/listings/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BusinessIdRoute = BusinessIdRouteImport.update({
+  id: '/business/$id',
+  path: '/business/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardInvestorIndexRoute = DashboardInvestorIndexRouteImport.update({
@@ -84,9 +96,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
+  '/business/$id': typeof BusinessIdRoute
   '/listings/$id': typeof ListingsIdRoute
   '/register/business': typeof RegisterBusinessRoute
   '/register/investor': typeof RegisterInvestorRoute
+  '/register/': typeof RegisterIndexRoute
   '/dashboard/business/create-listing': typeof DashboardBusinessCreateListingRoute
   '/dashboard/business/payments': typeof DashboardBusinessPaymentsRoute
   '/dashboard/investor/portfolio': typeof DashboardInvestorPortfolioRoute
@@ -97,9 +111,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
+  '/business/$id': typeof BusinessIdRoute
   '/listings/$id': typeof ListingsIdRoute
   '/register/business': typeof RegisterBusinessRoute
   '/register/investor': typeof RegisterInvestorRoute
+  '/register': typeof RegisterIndexRoute
   '/dashboard/business/create-listing': typeof DashboardBusinessCreateListingRoute
   '/dashboard/business/payments': typeof DashboardBusinessPaymentsRoute
   '/dashboard/investor/portfolio': typeof DashboardInvestorPortfolioRoute
@@ -111,9 +127,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
+  '/business/$id': typeof BusinessIdRoute
   '/listings/$id': typeof ListingsIdRoute
   '/register/business': typeof RegisterBusinessRoute
   '/register/investor': typeof RegisterInvestorRoute
+  '/register/': typeof RegisterIndexRoute
   '/dashboard/business/create-listing': typeof DashboardBusinessCreateListingRoute
   '/dashboard/business/payments': typeof DashboardBusinessPaymentsRoute
   '/dashboard/investor/portfolio': typeof DashboardInvestorPortfolioRoute
@@ -126,9 +144,11 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/notifications'
+    | '/business/$id'
     | '/listings/$id'
     | '/register/business'
     | '/register/investor'
+    | '/register/'
     | '/dashboard/business/create-listing'
     | '/dashboard/business/payments'
     | '/dashboard/investor/portfolio'
@@ -139,9 +159,11 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/notifications'
+    | '/business/$id'
     | '/listings/$id'
     | '/register/business'
     | '/register/investor'
+    | '/register'
     | '/dashboard/business/create-listing'
     | '/dashboard/business/payments'
     | '/dashboard/investor/portfolio'
@@ -152,9 +174,11 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/notifications'
+    | '/business/$id'
     | '/listings/$id'
     | '/register/business'
     | '/register/investor'
+    | '/register/'
     | '/dashboard/business/create-listing'
     | '/dashboard/business/payments'
     | '/dashboard/investor/portfolio'
@@ -166,9 +190,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   NotificationsRoute: typeof NotificationsRoute
+  BusinessIdRoute: typeof BusinessIdRoute
   ListingsIdRoute: typeof ListingsIdRoute
   RegisterBusinessRoute: typeof RegisterBusinessRoute
   RegisterInvestorRoute: typeof RegisterInvestorRoute
+  RegisterIndexRoute: typeof RegisterIndexRoute
   DashboardBusinessCreateListingRoute: typeof DashboardBusinessCreateListingRoute
   DashboardBusinessPaymentsRoute: typeof DashboardBusinessPaymentsRoute
   DashboardInvestorPortfolioRoute: typeof DashboardInvestorPortfolioRoute
@@ -199,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/register/': {
+      id: '/register/'
+      path: '/register'
+      fullPath: '/register/'
+      preLoaderRoute: typeof RegisterIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register/investor': {
       id: '/register/investor'
       path: '/register/investor'
@@ -218,6 +251,13 @@ declare module '@tanstack/react-router' {
       path: '/listings/$id'
       fullPath: '/listings/$id'
       preLoaderRoute: typeof ListingsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/business/$id': {
+      id: '/business/$id'
+      path: '/business/$id'
+      fullPath: '/business/$id'
+      preLoaderRoute: typeof BusinessIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/investor/': {
@@ -262,9 +302,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   NotificationsRoute: NotificationsRoute,
+  BusinessIdRoute: BusinessIdRoute,
   ListingsIdRoute: ListingsIdRoute,
   RegisterBusinessRoute: RegisterBusinessRoute,
   RegisterInvestorRoute: RegisterInvestorRoute,
+  RegisterIndexRoute: RegisterIndexRoute,
   DashboardBusinessCreateListingRoute: DashboardBusinessCreateListingRoute,
   DashboardBusinessPaymentsRoute: DashboardBusinessPaymentsRoute,
   DashboardInvestorPortfolioRoute: DashboardInvestorPortfolioRoute,
