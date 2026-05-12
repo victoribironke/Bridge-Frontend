@@ -49,9 +49,7 @@ const BusinessRegister = () => {
 
   const [bankData, setBankData] = useState<any>(null);
 
-  const { data: profileData } = useBusinessProfile({
-    refetchInterval: bankData && !bankData.analyzed ? 3000 : false,
-  });
+  const { data: profileData } = useBusinessProfile();
 
   const monoInflow = (profileData as any)?.business_profiles?.monoAverageMonthlyInflow;
 
