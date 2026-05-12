@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Field,
   FormShell,
@@ -11,14 +11,14 @@ import {
   Stepper,
   Textarea,
 } from "@/components/form-bits";
-import { useBusinessActiveListing, useBusinessProfile, usePreviewTerms } from "@/hooks/queries";
+import { useBusinessProfile, usePreviewTerms, useUserId } from "@/hooks/queries";
 import { useCreateListingMutation } from "@/hooks/mutations";
-import { PAGES } from "@/lib/constants";
+import { BUSINESS_DASHBOARD_SNAPSHOT_KEY, PAGES } from "@/lib/constants";
 import { formatNaira, formatNairaFull } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-const STEPS = ["Raise", "Terms", "References"];
+const STEPS = ["Raise", "Terms"];
 
 const TIER_LIMIT: Record<number, number> = {
   1: 10_000_000,
@@ -26,23 +26,51 @@ const TIER_LIMIT: Record<number, number> = {
   3: 100_000_000,
 };
 
+const getStoredDashboardSnapshot = () => {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(BUSINESS_DASHBOARD_SNAPSHOT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
+};
+
+const cleanBackendMessage = (message?: string) => {
+  return (message || "We could not calculate deal terms for this capital amount and timeline.")
+    .replace(/â‚¦/g, "₦")
+    .replace(/\r\n/g, "\n");
+};
+
 const CreateListing = () => {
   const navigate = useNavigate();
-  const { data: activeListing, isLoading: isActiveLoading } = useBusinessActiveListing();
-  const { data: profileData, isLoading: isProfileLoading } = useBusinessProfile();
+  const userId = useUserId();
+  const [storedSnapshot] = useState<any>(() => getStoredDashboardSnapshot());
+
+  const storedProfileData = storedSnapshot?.profileData;
+  const storedProfileUserId = storedProfileData?.business_profiles?.userId;
+  const snapshotMatchesUser = !!storedProfileData && (!userId || storedProfileUserId === userId);
+  const { data: fetchedProfileData, isLoading: isProfileLoading } =
+    useBusinessProfile(!snapshotMatchesUser);
+  const profileData = snapshotMatchesUser ? storedProfileData : fetchedProfileData;
 
   const [step, setStep] = useState(0);
   const [capital, setCapital] = useState<number>(100_000);
   const [preferredRepaymentMonths, setPreferredRepaymentMonths] = useState(12);
   const [useFunds, setUseFunds] = useState("");
   const [impact, setImpact] = useState("");
-  const [refs, setRefs] = useState<[string, string, string]>(["", "", ""]);
   const [submitted, setSubmitted] = useState<{ id: string } | null>(null);
 
   const createMut = useCreateListingMutation();
 
   const businessProfile = (profileData as any)?.business_profiles || {};
   const tier = businessProfile.tier || 1;
+  const repaymentOptions = useMemo(
+    () => (tier === 1 ? [12, 15, 18] : [12, 15, 18, 21, 24]),
+    [tier],
+  );
   const tierCapKobo = TIER_LIMIT[tier] || TIER_LIMIT[1];
   const verifiedMonthlyRevenueKobo = Number(businessProfile.monoAverageMonthlyInflow || 0);
   const revenueMultipleCapKobo = Math.floor(verifiedMonthlyRevenueKobo * 1.5);
@@ -50,14 +78,23 @@ const CreateListing = () => {
   const limitNaira = Math.floor(limitKobo / 100);
   const requestedCapitalKobo = capital * 100;
   const capitalValid = capital > 0 && requestedCapitalKobo <= limitKobo;
-  const canCalculateTerms = step === 1 && capitalValid;
+  const canCalculateTerms =
+    step === 1 && capitalValid && repaymentOptions.includes(preferredRepaymentMonths);
 
-  const { data: termsData, isLoading: isTermsLoading } = usePreviewTerms(
-    requestedCapitalKobo,
-    preferredRepaymentMonths,
-    canCalculateTerms,
-  );
+  const {
+    data: termsData,
+    isLoading: isTermsLoading,
+    isFetching: isTermsFetching,
+    isError: isTermsError,
+    error: termsError,
+  } = usePreviewTerms(requestedCapitalKobo, preferredRepaymentMonths, canCalculateTerms);
   const terms = termsData || {};
+  const termsErrorMessage = cleanBackendMessage(termsError?.message);
+  const shouldOffer18Months =
+    isTermsError &&
+    repaymentOptions.includes(18) &&
+    preferredRepaymentMonths !== 18 &&
+    termsErrorMessage.includes("18 months");
 
   useEffect(() => {
     if (limitNaira > 0 && capital > limitNaira) {
@@ -65,31 +102,18 @@ const CreateListing = () => {
     }
   }, [capital, limitNaira]);
 
-  if (isActiveLoading || isProfileLoading) {
+  useEffect(() => {
+    if (!repaymentOptions.includes(preferredRepaymentMonths)) {
+      setPreferredRepaymentMonths(repaymentOptions[repaymentOptions.length - 1]);
+    }
+  }, [preferredRepaymentMonths, repaymentOptions]);
+
+  if (!profileData && isProfileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           Loading listing requirements...
-        </div>
-      </div>
-    );
-  }
-
-  if (activeListing) {
-    return (
-      <div className="mx-auto max-w-2xl px-6 py-16">
-        <div className="rounded-2xl border border-warning/40 bg-warning/10 p-6">
-          <h2 className="font-display text-2xl">You already have an active listing</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Wait until it's fully funded and completed before creating a new one.
-          </p>
-          <button
-            onClick={() => navigate({ to: PAGES.DASHBOARD_BUSINESS })}
-            className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-          >
-            Back to dashboard
-          </button>
         </div>
       </div>
     );
@@ -124,8 +148,8 @@ const CreateListing = () => {
         <div className="rounded-3xl border border-success/30 bg-success/10 p-10">
           <h2 className="font-display text-3xl">Your listing is live</h2>
           <p className="mt-3 text-sm text-muted-foreground">
-            SMS confirmations have been sent to your customer references and your AI profile is
-            generated.
+            Your AI investor profile has been generated and your listing is now available to
+            investors.
           </p>
           <Link
             to={PAGES.LISTINGS_ID}
@@ -142,7 +166,7 @@ const CreateListing = () => {
   const handleSubmit = () => {
     createMut.mutate(
       {
-        capitalRequested: capital * 100,
+        capitalRequested: requestedCapitalKobo,
         preferredRepaymentMonths,
         useOfFunds: useFunds,
         expectedImpact: impact,
@@ -152,8 +176,14 @@ const CreateListing = () => {
           toast.success("Listing created successfully!");
           setSubmitted({ id: data.id });
         },
-        onError: (err) => {
-          toast.error(err.message || "Failed to create listing.");
+        onError: (err: any) => {
+          if (err.statusCode === 409) {
+            toast.error("You already have an active listing.");
+            navigate({ to: PAGES.DASHBOARD_BUSINESS });
+            return;
+          }
+
+          toast.error(cleanBackendMessage(err.message) || "Failed to create listing.");
         },
       },
     );
@@ -198,7 +228,7 @@ const CreateListing = () => {
                 value={preferredRepaymentMonths}
                 onChange={(e) => setPreferredRepaymentMonths(Number(e.target.value))}
               >
-                {[12, 15, 18, 21, 24].map((months) => (
+                {repaymentOptions.map((months) => (
                   <option key={months} value={months}>
                     {months} months
                   </option>
@@ -227,19 +257,58 @@ const CreateListing = () => {
         {step === 1 && (
           <FormShell
             title="Deal terms"
-            subtitle="Calculated from your capital ask and your linked bank inflows. To change them, go back and adjust the capital amount."
+            subtitle="Calculated from your capital ask, selected repayment period, and linked bank inflows."
             footer={
               <>
-                <GhostBtn onClick={() => setStep(0)}>Back</GhostBtn>
-                <PrimaryBtn disabled={isTermsLoading} onClick={() => setStep(2)}>
-                  Accept these terms
+                <GhostBtn onClick={() => setStep(0)} disabled={createMut.isPending}>
+                  Back
+                </GhostBtn>
+                <PrimaryBtn
+                  disabled={
+                    isTermsLoading ||
+                    isTermsFetching ||
+                    isTermsError ||
+                    !termsData ||
+                    createMut.isPending
+                  }
+                  onClick={handleSubmit}
+                >
+                  {createMut.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Submit listing"
+                  )}
                 </PrimaryBtn>
               </>
             }
           >
-            {isTermsLoading ? (
-              <div className="py-10 flex justify-center">
-                <Loader2 className="animate-spin text-primary" />
+            {isTermsLoading || isTermsFetching ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-10 text-sm text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                Calculating deal terms...
+              </div>
+            ) : isTermsError ? (
+              <div className="rounded-xl border border-warning/40 bg-warning/10 p-5 text-sm">
+                <div className="font-medium text-warning">These terms need adjustment</div>
+                <p className="mt-3 whitespace-pre-line text-muted-foreground">
+                  {termsErrorMessage}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setStep(0)}
+                    className="rounded-md border border-input px-3 py-2 text-sm hover:bg-secondary"
+                  >
+                    Adjust amount
+                  </button>
+                  {shouldOffer18Months && (
+                    <button
+                      onClick={() => setPreferredRepaymentMonths(18)}
+                      className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                    >
+                      Use 18 months
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               <>
@@ -251,7 +320,7 @@ const CreateListing = () => {
                   />
                   <Term
                     label="Target horizon"
-                    value={`${terms.targetRepaymentMonths || 12} months`}
+                    value={`${terms.targetRepaymentMonths || preferredRepaymentMonths} months`}
                   />
                   <Term
                     label="Monthly sweep at avg revenue"
@@ -297,46 +366,6 @@ const CreateListing = () => {
                 </div>
               </>
             )}
-          </FormShell>
-        )}
-
-        {step === 2 && (
-          <FormShell
-            title="Customer references"
-            subtitle="Each number gets an SMS asking them to confirm they purchased from you. Confirmations appear on the listing and improve your Bridge Rating."
-            footer={
-              <>
-                <GhostBtn onClick={() => setStep(1)} disabled={createMut.isPending}>
-                  Back
-                </GhostBtn>
-                <PrimaryBtn disabled={!refs[0] || createMut.isPending} onClick={handleSubmit}>
-                  {createMut.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Submit listing"
-                  )}
-                </PrimaryBtn>
-              </>
-            }
-          >
-            <Field label="Reference 1 (required)">
-              <Input
-                value={refs[0]}
-                onChange={(e) => setRefs([e.target.value, refs[1], refs[2]])}
-              />
-            </Field>
-            <Field label="Reference 2">
-              <Input
-                value={refs[1]}
-                onChange={(e) => setRefs([refs[0], e.target.value, refs[2]])}
-              />
-            </Field>
-            <Field label="Reference 3">
-              <Input
-                value={refs[2]}
-                onChange={(e) => setRefs([refs[0], refs[1], e.target.value])}
-              />
-            </Field>
           </FormShell>
         )}
       </div>
