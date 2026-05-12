@@ -113,6 +113,24 @@ const InvestorDashboard = () => {
   );
 };
 
+const getListingsArray = (response: any) => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.listings)) return response.listings;
+  return [];
+};
+
+const normalizeListingCard = (item: any) => {
+  if (!item?.listings) return item;
+
+  return {
+    ...item.listings,
+    business_profiles: item.business_profiles || item.listings.business_profiles,
+    bridge_ratings: item.bridge_ratings || item.listings.bridge_ratings,
+    matchScore: item.matchScore,
+  };
+};
+
 const ForYou = () => {
   const { data: matchedData, isLoading } = useInvestorMatchedListings();
 
@@ -124,7 +142,7 @@ const ForYou = () => {
     );
   }
 
-  const matched = matchedData?.data || [];
+  const matched = getListingsArray(matchedData).map(normalizeListingCard);
 
   if (matched.length === 0) {
     return (
@@ -163,7 +181,7 @@ const AllListings = () => {
 
   const { data, isLoading } = useListings(params);
 
-  const filtered = data?.data || [];
+  const filtered = getListingsArray(data).map(normalizeListingCard);
 
   const hasFilters = sector || tier || standing;
   const resetFilters = () => {
@@ -269,9 +287,10 @@ const AllListings = () => {
 const Card = ({ l }: { l: any }) => {
   const sector = l.business_profiles?.sector || "Sector";
   const tier = l.business_profiles?.tier || "1";
-  const standing = l.bridge_ratings?.overallStanding || "Seed";
+  const standing = l.bridge_ratings?.standing || l.bridge_ratings?.overallStanding || "Seed";
   const businessName = l.business_profiles?.businessName || "Business";
-  const narrative = l.aiProfile?.narrative?.[0] || l.useOfFunds || "";
+  const narrative =
+    (typeof l.aiProfile === "object" && l.aiProfile?.narrative?.[0]) || l.useOfFunds || "";
 
   return (
     <Link
