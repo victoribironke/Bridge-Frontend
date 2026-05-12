@@ -106,13 +106,12 @@ export const useInvestorDeals = (status?: "active" | "completed" | "defaulted") 
 };
 
 // BUSINESS
-export const useBusinessProfile = (options?: { refetchInterval?: number | false }) => {
+export const useBusinessProfile = () => {
   const userId = useUserId();
   return useQuery({
     queryKey: ["business-profile", userId],
     queryFn: () => apiFetch<any>(`/business/${userId}/profile`),
     enabled: !!userId,
-    refetchInterval: options?.refetchInterval as any,
   });
 };
 
