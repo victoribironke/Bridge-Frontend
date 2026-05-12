@@ -185,6 +185,7 @@ const BusinessRegister = () => {
                 <PrimaryBtn
                   disabled={
                     !biz.name ||
+                    biz.name.split(" ").length < 2 ||
                     !biz.sector ||
                     !biz.location ||
                     !biz.revenue ||
@@ -203,7 +204,7 @@ const BusinessRegister = () => {
               </>
             }
           >
-            <Field label="Business name">
+            <Field label="Business name (must include at least two words)">
               <Input value={biz.name} onChange={(e) => setBiz({ ...biz, name: e.target.value })} />
             </Field>
             <Field label="Business type">
