@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useBusinessProfile,
   useBusinessStats,
@@ -10,7 +10,7 @@ import {
   useBusinessRating,
 } from "@/hooks/queries";
 import { formatNaira } from "@/lib/utils";
-import { PAGES } from "@/lib/constants";
+import { BUSINESS_DASHBOARD_SNAPSHOT_KEY, PAGES } from "@/lib/constants";
 import { useRepayMutation } from "@/hooks/mutations";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +24,22 @@ const BusinessDashboard = () => {
   const businessProfile = (profileData as any)?.business_profiles || {};
   const businessProfileId = businessProfile.id as string | undefined;
   const { data: ratingData, isLoading: isRatingLoading } = useBusinessRating(businessProfileId);
+
+  useEffect(() => {
+    if (!profileData || isListingLoading) return;
+
+    try {
+      window.localStorage.setItem(
+        BUSINESS_DASHBOARD_SNAPSHOT_KEY,
+        JSON.stringify({
+          profileData,
+          activeListing: activeListing || null,
+        }),
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  }, [activeListing, isListingLoading, profileData]);
 
   if (isProfileLoading) {
     return (
@@ -420,7 +436,7 @@ const BusinessChartsSection = () => {
               {/* X Axis Labels */}
               <div className="flex justify-between px-[7.5%] mt-2 text-[10px] text-muted-foreground">
                 {revPoints.map((p, idx) => (
-                  <span key={idx} className="truncate max-w-[50px] text-center">
+                  <span key={idx} className="truncate max-w-12.5 text-center">
                     {p.label}
                   </span>
                 ))}
@@ -515,7 +531,7 @@ const BusinessChartsSection = () => {
               {/* X Axis Labels */}
               <div className="flex justify-between px-[7.5%] mt-2 text-[10px] text-muted-foreground">
                 {sweepPoints.map((p, idx) => (
-                  <span key={idx} className="truncate max-w-[50px] text-center">
+                  <span key={idx} className="truncate max-w-12.5 text-center">
                     {p.label}
                   </span>
                 ))}
