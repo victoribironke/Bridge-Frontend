@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Field,
   FormShell,
   GhostBtn,
   Input,
   PrimaryBtn,
+  Select,
   Stepper,
   Textarea,
 } from "@/components/form-bits";
@@ -28,10 +29,11 @@ const TIER_LIMIT: Record<number, number> = {
 const CreateListing = () => {
   const navigate = useNavigate();
   const { data: activeListing, isLoading: isActiveLoading } = useBusinessActiveListing();
-  const { data: profileData } = useBusinessProfile();
+  const { data: profileData, isLoading: isProfileLoading } = useBusinessProfile();
 
   const [step, setStep] = useState(0);
-  const [capital, setCapital] = useState<number>(2_000_000);
+  const [capital, setCapital] = useState<number>(100_000);
+  const [preferredRepaymentMonths, setPreferredRepaymentMonths] = useState(12);
   const [useFunds, setUseFunds] = useState("");
   const [impact, setImpact] = useState("");
   const [refs, setRefs] = useState<[string, string, string]>(["", "", ""]);
@@ -41,16 +43,35 @@ const CreateListing = () => {
 
   const businessProfile = (profileData as any)?.business_profiles || {};
   const tier = businessProfile.tier || 1;
-  const limitKobo = TIER_LIMIT[tier] || 10_000_000;
-  const limitNaira = limitKobo / 100;
+  const tierCapKobo = TIER_LIMIT[tier] || TIER_LIMIT[1];
+  const verifiedMonthlyRevenueKobo = Number(businessProfile.monoAverageMonthlyInflow || 0);
+  const revenueMultipleCapKobo = Math.floor(verifiedMonthlyRevenueKobo * 1.5);
+  const limitKobo = Math.min(tierCapKobo, revenueMultipleCapKobo || tierCapKobo);
+  const limitNaira = Math.floor(limitKobo / 100);
+  const requestedCapitalKobo = capital * 100;
+  const capitalValid = capital > 0 && requestedCapitalKobo <= limitKobo;
+  const canCalculateTerms = step === 1 && capitalValid;
 
-  const { data: termsData, isLoading: isTermsLoading } = usePreviewTerms(capital * 100);
+  const { data: termsData, isLoading: isTermsLoading } = usePreviewTerms(
+    requestedCapitalKobo,
+    preferredRepaymentMonths,
+    canCalculateTerms,
+  );
   const terms = termsData || {};
 
-  if (isActiveLoading) {
+  useEffect(() => {
+    if (limitNaira > 0 && capital > limitNaira) {
+      setCapital(limitNaira);
+    }
+  }, [capital, limitNaira]);
+
+  if (isActiveLoading || isProfileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          Loading listing requirements...
+        </div>
       </div>
     );
   }
@@ -122,7 +143,7 @@ const CreateListing = () => {
     createMut.mutate(
       {
         capitalRequested: capital * 100,
-        preferredRepaymentMonths: 12, // Default to 12 or use terms.targetRepaymentMonths if available
+        preferredRepaymentMonths,
         useOfFunds: useFunds,
         expectedImpact: impact,
       },
@@ -147,14 +168,12 @@ const CreateListing = () => {
         {step === 0 && (
           <FormShell
             title="Raise details"
-            subtitle={`Your current tier raise limit is ${formatNairaFull(limitKobo)}.`}
+            subtitle={`You can raise up to ${formatNairaFull(limitKobo)} based on your verified monthly inflow and tier cap.`}
             footer={
               <>
                 <span />
                 <PrimaryBtn
-                  disabled={
-                    !capital || capital > limitNaira || useFunds.length < 80 || impact.length < 80
-                  }
+                  disabled={!capitalValid || useFunds.length < 80 || impact.length < 80}
                   onClick={() => setStep(1)}
                 >
                   Continue
@@ -162,14 +181,29 @@ const CreateListing = () => {
               </>
             }
           >
-            <Field label="Capital amount (₦)" hint={`Maximum ${formatNairaFull(limitKobo)}`}>
+            <Field
+              label="Capital amount (₦)"
+              hint={`Maximum ${formatNairaFull(limitKobo)}. This is capped at 1.5× your Mono-verified monthly inflow and your tier limit.`}
+            >
               <Input
                 type="number"
-                min={100_000}
+                min={1}
                 max={limitNaira}
                 value={capital}
                 onChange={(e) => setCapital(Number(e.target.value) || 0)}
               />
+            </Field>
+            <Field label="Preferred repayment period">
+              <Select
+                value={preferredRepaymentMonths}
+                onChange={(e) => setPreferredRepaymentMonths(Number(e.target.value))}
+              >
+                {[12, 15, 18, 21, 24].map((months) => (
+                  <option key={months} value={months}>
+                    {months} months
+                  </option>
+                ))}
+              </Select>
             </Field>
             <Field label="Use of funds" hint={`${useFunds.length}/80 minimum — be specific.`}>
               <Textarea
