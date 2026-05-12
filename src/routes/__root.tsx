@@ -115,22 +115,6 @@ const Header = () => {
           <span className="font-display text-xl tracking-tight">Bridge</span>
         </Link>
         <nav className="hidden items-center gap-6 md:flex text-sm">
-          {userType === "guest" && (
-            <>
-              <Link
-                to={PAGES.REGISTER_BUSINESS}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                For businesses
-              </Link>
-              <Link
-                to={PAGES.REGISTER_INVESTOR}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                For investors
-              </Link>
-            </>
-          )}
           {userType === "investor" && (
             <>
               <Link
@@ -179,7 +163,7 @@ const Header = () => {
             </>
           )}
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {userType !== "guest" ? (
             <button
               onClick={logout}
@@ -188,12 +172,20 @@ const Header = () => {
               Log out
             </button>
           ) : (
-            <Link
-              to={PAGES.LOGIN}
-              className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-primary hover:text-primary-foreground transition-colors"
-            >
-              Log in
-            </Link>
+            <>
+              <Link
+                to={PAGES.LOGIN}
+                className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-secondary transition-colors"
+              >
+                Log in
+              </Link>
+              <Link
+                to={PAGES.REGISTER}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                Sign up
+              </Link>
+            </>
           )}
         </div>
       </div>
