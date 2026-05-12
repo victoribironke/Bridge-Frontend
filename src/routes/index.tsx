@@ -28,10 +28,10 @@ const Hero = () => {
             Capital that meets businesses where they already are.
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
-            Bridge is a marketplace for revenue-share deals between Nigerian small businesses and
-            everyday investors. Businesses raise capital against the income they already earn.
-            Investors back vetted operators and get repaid as the business sells. Every deal is
-            structured, scored, and swept automatically.
+            Bridge is a marketplace that turns business revenue into investable assets. Businesses
+            raise capital against the income they already earn. Investors back vetted operators and
+            get repaid as the business sells. Every deal is structured, scored, and swept
+            automatically.
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
             <Link
