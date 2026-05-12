@@ -253,6 +253,39 @@ const BusinessChartsSection = () => {
   const maxRev = Math.max(...rawData.map((d: any) => d.totalIncoming || 0), 1000000);
   const maxSweep = Math.max(...rawData.map((d: any) => d.totalSwept || 0), 100000);
 
+  type ChartPoint = {
+    x: number;
+    y: number;
+    val: number;
+    label: string;
+  };
+
+  // Helper to compute SVG points
+  const getChartPoints = (key: string, maxVal: number): ChartPoint[] => {
+    const len = rawData.length;
+    return rawData.map((d: any, idx: number) => {
+      const val = d[key] || 0;
+      const x = 30 + (idx / Math.max(1, len - 1)) * 340;
+      const y = 130 - (val / maxVal) * 100;
+      return { x, y, val, label: d.label.replace("2025-", "").replace("2026-", "") };
+    });
+  };
+
+  const revPoints = getChartPoints("totalIncoming", maxRev);
+  const sweepPoints = getChartPoints("totalSwept", maxSweep);
+
+  const revPolylineStr = revPoints.map((p) => `${p.x},${p.y}`).join(" ");
+  const revAreaStr =
+    revPoints.length > 0
+      ? `${revPoints[0].x},130 ${revPolylineStr} ${revPoints[revPoints.length - 1].x},130`
+      : "";
+
+  const sweepPolylineStr = sweepPoints.map((p) => `${p.x},${p.y}`).join(" ");
+  const sweepAreaStr =
+    sweepPoints.length > 0
+      ? `${sweepPoints[0].x},130 ${sweepPolylineStr} ${sweepPoints[sweepPoints.length - 1].x},130`
+      : "";
+
   return (
     <section className="mt-6 rounded-3xl border border-border bg-card p-6 shadow-xl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -292,67 +325,193 @@ const BusinessChartsSection = () => {
         </div>
       ) : (
         <div className="mt-8 grid gap-8 md:grid-cols-2">
-          {/* Revenue over time chart */}
-          <div className="rounded-2xl border border-border/50 bg-secondary/10 p-4 relative overflow-hidden group">
+          {/* Revenue over time line chart */}
+          <div className="rounded-2xl border border-border/50 bg-secondary/10 p-4 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
               Revenue over time
             </div>
 
-            <div className="mt-6 flex items-end gap-3 h-48 pt-4">
-              {rawData.map((d: any, idx: number) => {
-                const heightPct = Math.max(((d.totalIncoming || 0) / maxRev) * 100, 8);
-                return (
-                  <div
-                    key={idx}
-                    className="flex-1 flex flex-col items-center gap-2 h-full justify-end"
-                  >
-                    <div
-                      className="w-full bg-linear-to-t from-primary/40 to-primary rounded-t-lg transition-all duration-500 group-hover:opacity-90 relative"
-                      style={{ height: `${heightPct}%` }}
-                    >
-                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-foreground text-background text-[10px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap shadow-md z-10">
-                        {formatNaira(d.totalIncoming || 0)}
-                      </div>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground truncate max-w-full">
-                      {d.label.replace("2025-", "").replace("2026-", "")}
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="relative w-full pt-2">
+              <svg viewBox="0 0 400 160" className="w-full h-auto overflow-visible">
+                <defs>
+                  <linearGradient id="revGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="0%"
+                      stopColor="var(--color-primary, #003cbb)"
+                      stopOpacity="0.25"
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="var(--color-primary, #003cbb)"
+                      stopOpacity="0.0"
+                    />
+                  </linearGradient>
+                </defs>
+
+                {/* Grid lines */}
+                <line
+                  x1="30"
+                  y1="30"
+                  x2="370"
+                  y2="30"
+                  stroke="currentColor"
+                  strokeOpacity="0.05"
+                  strokeDasharray="4 4"
+                />
+                <line
+                  x1="30"
+                  y1="80"
+                  x2="370"
+                  y2="80"
+                  stroke="currentColor"
+                  strokeOpacity="0.05"
+                  strokeDasharray="4 4"
+                />
+                <line
+                  x1="30"
+                  y1="130"
+                  x2="370"
+                  y2="130"
+                  stroke="currentColor"
+                  strokeOpacity="0.1"
+                />
+
+                {/* Area under curve */}
+                {revAreaStr && <polygon points={revAreaStr} fill="url(#revGradient)" />}
+
+                {/* Main line */}
+                {revPolylineStr && (
+                  <polyline
+                    points={revPolylineStr}
+                    fill="none"
+                    stroke="var(--color-primary, #003cbb)"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                )}
+
+                {/* Interactive points */}
+                {revPoints.map((p, idx) => (
+                  <g key={idx} className="group/point cursor-pointer">
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r="5"
+                      fill="var(--color-primary, #003cbb)"
+                      stroke="var(--color-background, #ffffff)"
+                      strokeWidth="2"
+                      className="transition-transform group-hover/point:scale-150"
+                    />
+                    <title>{`${p.label}: ${formatNaira(p.val)}`}</title>
+                  </g>
+                ))}
+              </svg>
+
+              {/* X Axis Labels */}
+              <div className="flex justify-between px-[7.5%] mt-2 text-[10px] text-muted-foreground">
+                {revPoints.map((p, idx) => (
+                  <span key={idx} className="truncate max-w-[50px] text-center">
+                    {p.label}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Sweeps over time chart */}
-          <div className="rounded-2xl border border-border/50 bg-secondary/10 p-4 relative overflow-hidden group">
+          {/* Sweeps over time line chart */}
+          <div className="rounded-2xl border border-border/50 bg-secondary/10 p-4 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-32 h-32 bg-success/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
               Sweeps over time
             </div>
 
-            <div className="mt-6 flex items-end gap-3 h-48 pt-4">
-              {rawData.map((d: any, idx: number) => {
-                const heightPct = Math.max(((d.totalSwept || 0) / maxSweep) * 100, 8);
-                return (
-                  <div
-                    key={idx}
-                    className="flex-1 flex flex-col items-center gap-2 h-full justify-end"
-                  >
-                    <div
-                      className="w-full bg-linear-to-t from-success/40 to-success rounded-t-lg transition-all duration-500 group-hover:opacity-90 relative"
-                      style={{ height: `${heightPct}%` }}
-                    >
-                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-foreground text-background text-[10px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap shadow-md z-10">
-                        {formatNaira(d.totalSwept || 0)}
-                      </div>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground truncate max-w-full">
-                      {d.label.replace("2025-", "").replace("2026-", "")}
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="relative w-full pt-2">
+              <svg viewBox="0 0 400 160" className="w-full h-auto overflow-visible">
+                <defs>
+                  <linearGradient id="sweepGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="0%"
+                      stopColor="var(--color-success, #10b981)"
+                      stopOpacity="0.25"
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="var(--color-success, #10b981)"
+                      stopOpacity="0.0"
+                    />
+                  </linearGradient>
+                </defs>
+
+                {/* Grid lines */}
+                <line
+                  x1="30"
+                  y1="30"
+                  x2="370"
+                  y2="30"
+                  stroke="currentColor"
+                  strokeOpacity="0.05"
+                  strokeDasharray="4 4"
+                />
+                <line
+                  x1="30"
+                  y1="80"
+                  x2="370"
+                  y2="80"
+                  stroke="currentColor"
+                  strokeOpacity="0.05"
+                  strokeDasharray="4 4"
+                />
+                <line
+                  x1="30"
+                  y1="130"
+                  x2="370"
+                  y2="130"
+                  stroke="currentColor"
+                  strokeOpacity="0.1"
+                />
+
+                {/* Area under curve */}
+                {sweepAreaStr && <polygon points={sweepAreaStr} fill="url(#sweepGradient)" />}
+
+                {/* Main line */}
+                {sweepPolylineStr && (
+                  <polyline
+                    points={sweepPolylineStr}
+                    fill="none"
+                    stroke="var(--color-success, #10b981)"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                )}
+
+                {/* Interactive points */}
+                {sweepPoints.map((p, idx) => (
+                  <g key={idx} className="group/point cursor-pointer">
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r="5"
+                      fill="var(--color-success, #10b981)"
+                      stroke="var(--color-background, #ffffff)"
+                      strokeWidth="2"
+                      className="transition-transform group-hover/point:scale-150"
+                    />
+                    <title>{`${p.label}: ${formatNaira(p.val)}`}</title>
+                  </g>
+                ))}
+              </svg>
+
+              {/* X Axis Labels */}
+              <div className="flex justify-between px-[7.5%] mt-2 text-[10px] text-muted-foreground">
+                {sweepPoints.map((p, idx) => (
+                  <span key={idx} className="truncate max-w-[50px] text-center">
+                    {p.label}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
