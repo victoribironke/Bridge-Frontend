@@ -101,6 +101,45 @@ export const useRepayMutation = () => {
   });
 };
 
+export const usePayoutAccountLookupMutation = () => {
+  return useMutation({
+    mutationFn: (data: { bankCode: string; accountNumber: string }) =>
+      apiFetch<any>("/payouts/account-lookup", { method: "POST", body: data }),
+  });
+};
+
+export const usePayoutTransferMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      amount: string;
+      bankCode: string;
+      accountNumber: string;
+      accountName: string;
+      remark: string;
+    }) => apiFetch<any>("/payouts/transfer", { method: "POST", body: data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payouts"] });
+      queryClient.invalidateQueries({ queryKey: ["business-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["business-sweep-summary"] });
+    },
+  });
+};
+
+export const usePayoutRequeryMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (transactionReference: string) =>
+      apiFetch<any>("/payouts/requery", {
+        method: "POST",
+        body: { transactionReference },
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payouts"] });
+    },
+  });
+};
+
 // INVESTOR ACTIONS
 export const useInvestMutation = () => {
   const queryClient = useQueryClient();
