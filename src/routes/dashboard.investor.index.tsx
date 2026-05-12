@@ -149,109 +149,95 @@ const ForYou = () => {
 };
 
 const AllListings = () => {
-  const [sector, setSector] = useState<string[]>([]);
+  const [sector, setSector] = useState<string>("");
   const [tier, setTier] = useState<string>("");
-  const [standing, setStanding] = useState<string[]>([]);
+  const [standing, setStanding] = useState<string>("");
   const [sort, setSort] = useState("newest");
 
   // Format params for the API hook
   const params: Record<string, string> = {};
-  if (sector.length) params.sector = sector.join(",");
+  if (sector) params.sector = sector;
   if (tier) params.tier = tier;
-  if (standing.length) params.standing = standing.join(",");
+  if (standing) params.standing = standing;
   if (sort) params.sort = sort;
 
   const { data, isLoading } = useListings(params);
 
   const filtered = data?.data || [];
 
-  const toggle = (arr: string[], v: string, set: (a: string[]) => void) =>
-    set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+  const hasFilters = sector || tier || standing;
+  const resetFilters = () => {
+    setSector("");
+    setTier("");
+    setStanding("");
+  };
 
   return (
     <div className="mt-6 space-y-5">
       <div className="rounded-2xl border border-border bg-card p-5">
-        <div className="grid gap-4 md:grid-cols-3">
-          <div>
-            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Sector
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {SECTORS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => toggle(sector, s, setSector)}
-                  className={
-                    "rounded-full border px-2.5 py-0.5 text-xs " +
-                    (sector.includes(s)
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border")
-                  }
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex flex-col text-xs">
+              <span className="text-muted-foreground font-medium mb-1">Sector</span>
+              <select
+                value={sector}
+                onChange={(e) => setSector(e.target.value)}
+                className="rounded-xl border border-input bg-background px-3 py-2 text-xs focus:ring-2 focus:ring-ring focus:outline-none"
+              >
+                <option value="">All Sectors</option>
+                {SECTORS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col text-xs">
+              <span className="text-muted-foreground font-medium mb-1">Tier</span>
+              <select
+                value={tier}
+                onChange={(e) => setTier(e.target.value)}
+                className="rounded-xl border border-input bg-background px-3 py-2 text-xs focus:ring-2 focus:ring-ring focus:outline-none"
+              >
+                <option value="">Any Tier</option>
+                <option value="1">Tier 1</option>
+                <option value="2">Tier 2</option>
+                <option value="3">Tier 3</option>
+              </select>
+            </label>
+
+            <label className="flex flex-col text-xs">
+              <span className="text-muted-foreground font-medium mb-1">Standing</span>
+              <select
+                value={standing}
+                onChange={(e) => setStanding(e.target.value)}
+                className="rounded-xl border border-input bg-background px-3 py-2 text-xs focus:ring-2 focus:ring-ring focus:outline-none"
+              >
+                <option value="">Any Standing</option>
+                <option value="Seed">Seed</option>
+                <option value="Sprout">Sprout</option>
+                <option value="Established">Established</option>
+                <option value="Anchor">Anchor</option>
+              </select>
+            </label>
+
+            {hasFilters && (
+              <button
+                onClick={resetFilters}
+                className="self-end rounded-xl border border-dashed border-input bg-secondary px-3 py-2 text-xs hover:bg-secondary/80 transition-colors"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
-          <div>
-            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Tier
-            </div>
-            <div className="mt-2 flex gap-1.5">
-              {["", "1", "2", "3"].map((t) => (
-                <button
-                  key={t || "all"}
-                  onClick={() => setTier(t)}
-                  className={
-                    "rounded-full border px-2.5 py-0.5 text-xs " +
-                    (tier === t
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border")
-                  }
-                >
-                  {t ? `Tier ${t}` : "Any"}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Standing
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {["Seed", "Sprout", "Established", "Anchor"].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => toggle(standing, s, setStanding)}
-                  className={
-                    "rounded-full border px-2.5 py-0.5 text-xs " +
-                    (standing.includes(s)
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border")
-                  }
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-          <div className="flex flex-wrap gap-1.5">
-            {sector.map((s) => (
-              <Tag key={s} label={s} onRemove={() => toggle(sector, s, setSector)} />
-            ))}
-            {tier && <Tag label={`Tier ${tier}`} onRemove={() => setTier("")} />}
-            {standing.map((s) => (
-              <Tag key={s} label={s} onRemove={() => toggle(standing, s, setStanding)} />
-            ))}
-          </div>
-          <label className="text-xs">
-            <span className="text-muted-foreground">Sort </span>
+
+          <label className="flex flex-col text-xs">
+            <span className="text-muted-foreground font-medium mb-1">Sort by</span>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value)}
-              className="rounded-md border border-input bg-background px-2 py-1 text-xs"
+              className="rounded-xl border border-input bg-background px-3 py-2 text-xs focus:ring-2 focus:ring-ring focus:outline-none"
             >
               <option value="highest_bridge_rating">Highest Bridge Rating</option>
               <option value="highest_return">Highest return</option>
@@ -277,17 +263,6 @@ const AllListings = () => {
         </div>
       )}
     </div>
-  );
-};
-
-const Tag = ({ label, onRemove }: { label: string; onRemove: () => void }) => {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs">
-      {label}
-      <button onClick={onRemove} className="text-muted-foreground hover:text-foreground">
-        ×
-      </button>
-    </span>
   );
 };
 
