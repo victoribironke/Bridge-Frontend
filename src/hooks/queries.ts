@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
 
+const DASHBOARD_STALE_TIME = 60 * 1000;
+
 // Helper to extract userId from token
 export const useUserId = () => {
   const { token } = useAuth();
@@ -38,14 +40,19 @@ export const useListingDetail = (id: string) => {
   });
 };
 
-export const usePreviewTerms = (capitalRequested?: number) => {
+export const usePreviewTerms = (
+  capitalRequested?: number,
+  preferredRepaymentMonths = 12,
+  enabled = true,
+) => {
   return useQuery({
-    queryKey: ["preview-terms", capitalRequested],
+    queryKey: ["preview-terms", capitalRequested, preferredRepaymentMonths],
     queryFn: () =>
-      apiFetch<any>("/listings/preview-terms", {
-        params: { capitalRequested },
+      apiFetch<any>("/listings/calculate-terms", {
+        method: "POST",
+        body: { capitalRequested, preferredRepaymentMonths },
       }),
-    enabled: !!capitalRequested && capitalRequested > 0,
+    enabled: enabled && !!capitalRequested && capitalRequested > 0,
   });
 };
 
@@ -112,6 +119,7 @@ export const useBusinessProfile = () => {
     queryKey: ["business-profile", userId],
     queryFn: () => apiFetch<any>(`/business/${userId}/profile`),
     enabled: !!userId,
+    staleTime: DASHBOARD_STALE_TIME,
   });
 };
 
@@ -120,6 +128,16 @@ export const useBusinessProfileById = (userId: string) => {
     queryKey: ["business-profile", userId],
     queryFn: () => apiFetch<any>(`/business/${userId}/profile`),
     enabled: !!userId,
+    staleTime: DASHBOARD_STALE_TIME,
+  });
+};
+
+export const useBusinessRating = (businessId?: string) => {
+  return useQuery({
+    queryKey: ["business-rating", businessId],
+    queryFn: () => apiFetch<any>(`/business/${businessId}/rating`),
+    enabled: !!businessId,
+    staleTime: DASHBOARD_STALE_TIME,
   });
 };
 
@@ -129,6 +147,7 @@ export const useBusinessStats = () => {
     queryKey: ["business-stats", userId],
     queryFn: () => apiFetch<any>(`/business/${userId}/stats`),
     enabled: !!userId,
+    staleTime: DASHBOARD_STALE_TIME,
   });
 };
 
@@ -138,6 +157,7 @@ export const useBusinessActiveListing = () => {
     queryKey: ["business-active-listing", userId],
     queryFn: () => apiFetch<any>(`/business/${userId}/active-listing`),
     enabled: !!userId,
+    staleTime: DASHBOARD_STALE_TIME,
   });
 };
 
@@ -147,6 +167,7 @@ export const useBusinessActivity = () => {
     queryKey: ["business-activity", userId],
     queryFn: () => apiFetch<any>(`/business/${userId}/activity`),
     enabled: !!userId,
+    staleTime: DASHBOARD_STALE_TIME,
   });
 };
 
@@ -156,6 +177,7 @@ export const useBusinessPaymentLink = () => {
     queryKey: ["business-payment-link", userId],
     queryFn: () => apiFetch<any>(`/business/${userId}/payment-link`),
     enabled: !!userId,
+    staleTime: DASHBOARD_STALE_TIME,
   });
 };
 
@@ -174,6 +196,13 @@ export const useBusinessSweepSummary = () => {
     queryKey: ["business-sweep-summary", userId],
     queryFn: () => apiFetch<any>(`/business/${userId}/sweep-summary`),
     enabled: !!userId,
+  });
+};
+
+export const usePayouts = (page = 1, perPage = 10) => {
+  return useQuery({
+    queryKey: ["payouts", page, perPage],
+    queryFn: () => apiFetch<any>("/payouts/list", { params: { page, perPage } }),
   });
 };
 
