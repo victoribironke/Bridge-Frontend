@@ -8,17 +8,24 @@ import {
   usePaymentLink,
 } from "@/hooks/queries";
 import { formatNaira, formatNairaFull } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { Loader2, Copy, Check } from "lucide-react";
 
 const Portfolio = () => {
   const [tab, setTab] = useState<"active" | "completed" | "defaulted">("active");
   const [withdraw, setWithdraw] = useState(false);
   const [fundModal, setFundModal] = useState(false);
+  const [linkGenerated, setLinkGenerated] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const { data: summary, isLoading: isSummaryLoading } = useInvestorSummary();
   const { data: wallet, isLoading: isWalletLoading } = useInvestorWallet();
   const { data: dealsData, isLoading: isDealsLoading } = useInvestorDeals();
-  const { data: paymentData, isLoading: isPaymentLoading } = usePaymentLink();
+  const {
+    data: paymentData,
+    isLoading: isPaymentLoading,
+    refetch: refetchPaymentLink,
+  } = usePaymentLink();
 
   const deals = dealsData || [];
   const activeDeals = deals.filter((d: any) => d.status === "active");
@@ -216,50 +223,114 @@ const Portfolio = () => {
         </div>
       )}
       {fundModal && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-2xl">
-            <h3 className="font-display text-2xl">Fund your wallet</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Transfer funds to your dedicated Squad virtual account to start investing.
+        <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-2xl">
+            <h3 className="font-display text-2xl text-foreground">Fund your wallet</h3>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              Transfer funds directly via bank transfer or instantly generate a secure card/USSD
+              payment link.
             </p>
+
             {isPaymentLoading ? (
-              <div className="flex justify-center py-6">
-                <Loader2 className="animate-spin text-primary" />
+              <div className="flex justify-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : paymentData ? (
-              <div className="mt-6 text-center">
-                <div className="mb-4 inline-block rounded-xl border border-border bg-card px-6 py-4">
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Squad Virtual Account
+              <div className="mt-6 space-y-4 text-left">
+                <div className="rounded-2xl border border-border bg-secondary/30 p-4 text-center">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Dedicated Virtual Account
                   </div>
-                  <div className="mt-1 font-display text-2xl tracking-widest text-primary">
-                    {paymentData.virtualAccountNumber}
+                  <div className="mt-2 font-display text-3xl tracking-wider text-primary">
+                    {paymentData.virtualAccountNumber || "N/A"}
                   </div>
+                  <div className="mt-1 text-xs text-muted-foreground">Bank: Squad / GTBank</div>
                 </div>
-                {paymentData.paymentLink && (
-                  <div className="mt-4 text-sm text-muted-foreground">
-                    Or pay via{" "}
+
+                {!linkGenerated ? (
+                  <button
+                    onClick={async () => {
+                      setIsGenerating(true);
+                      await refetchPaymentLink();
+                      setIsGenerating(false);
+                      setLinkGenerated(true);
+                    }}
+                    disabled={isGenerating}
+                    className="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-xl border border-primary px-4 py-3 text-xs font-medium text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Generating link...
+                      </>
+                    ) : (
+                      "Generate payment link"
+                    )}
+                  </button>
+                ) : paymentData.paymentLink ? (
+                  <div className="rounded-2xl border border-border bg-card p-4 space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Instant Checkout Link
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Use this unique link to fund via Debit Card, USSD, or Bank Transfers
+                      instantly.
+                    </p>
+
+                    <div className="flex items-center gap-2 bg-secondary/50 border border-border rounded-xl p-2.5">
+                      <input
+                        type="text"
+                        readOnly
+                        value={paymentData.paymentLink}
+                        className="bg-transparent text-xs text-foreground w-full focus:outline-none truncate"
+                      />
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(paymentData.paymentLink);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                        className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                        title="Copy link"
+                      >
+                        {copied ? (
+                          <Check className="h-3.5 w-3.5 text-success" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    </div>
+
                     <a
                       href={paymentData.paymentLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-primary hover:underline"
+                      className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
                     >
-                      Squad Checkout
+                      Launch Squad Checkout →
                     </a>
+                  </div>
+                ) : (
+                  <div className="text-center text-xs text-muted-foreground py-2">
+                    Payment link generation unavailable.
                   </div>
                 )}
               </div>
             ) : (
-              <div className="mt-6 text-center text-sm text-destructive">
-                Failed to load payment details.
+              <div className="mt-6 rounded-xl border border-destructive/20 bg-destructive/5 py-4 text-center text-sm text-destructive">
+                Failed to load dedicated payment details.
               </div>
             )}
+
             <button
-              onClick={() => setFundModal(false)}
-              className="mt-6 w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+              onClick={() => {
+                setFundModal(false);
+                // optionally reset generated view state on close
+                setTimeout(() => setLinkGenerated(false), 300);
+              }}
+              className="mt-8 w-full rounded-xl bg-secondary px-4 py-2.5 text-sm font-medium text-foreground hover:bg-secondary/80 transition-colors"
             >
-              Done
+              Close
             </button>
           </div>
         </div>
