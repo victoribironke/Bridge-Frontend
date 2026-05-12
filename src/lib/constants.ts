@@ -11,7 +11,9 @@ export const PAGES = {
   DASHBOARD_BUSINESS_PAYMENTS: "/dashboard/business/payments",
   DASHBOARD_BUSINESS_CREATE_LISTING: "/dashboard/business/create-listing",
   LISTINGS_ID: "/listings/$id",
+  BUSINESS_ID: "/business/$id",
   LOGIN: "/login",
+  REGISTER: "/register",
 } as const;
 
 export const SECTORS = [
