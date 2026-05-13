@@ -7,11 +7,13 @@ import {
   useInvestorMatchedListings,
   useListings,
 } from "@/hooks/queries";
+import { useProtectedRoute } from "@/hooks/use-protected-route";
 import { formatNaira } from "@/lib/utils";
 import { PAGES, SECTORS } from "@/lib/constants";
 import { Loader2 } from "lucide-react";
 
 const InvestorDashboard = () => {
+  useProtectedRoute("investor");
   const [tab, setTab] = useState<"foryou" | "all">("foryou");
   const { data: summary, isLoading: isSummaryLoading } = useInvestorSummary();
   const { data: activity, isLoading: isActivityLoading } = useInvestorActivity();
