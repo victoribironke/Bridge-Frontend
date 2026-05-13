@@ -83,7 +83,7 @@ const BusinessProfilePage = () => {
             </div>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="font-display text-3xl text-primary">{standing}</span>
-              <span className="text-sm font-medium text-muted-foreground">Score: {score}</span>
+              {/* <span className="text-sm font-medium text-muted-foreground">Score: {score}</span> */}
             </div>
           </div>
 
@@ -129,9 +129,7 @@ const BusinessProfilePage = () => {
             </div>
 
             <div className="p-5 rounded-xl bg-primary/5 border border-primary/20">
-              <div className="text-xs uppercase tracking-wider text-primary">
-                Mono Verified Monthly Inflow
-              </div>
+              <div className="text-xs uppercase tracking-wider text-primary">Monthly Inflow</div>
               <div className="mt-2 font-display text-2xl text-primary">
                 {business.monoAverageMonthlyInflow
                   ? formatNairaFull(business.monoAverageMonthlyInflow)
