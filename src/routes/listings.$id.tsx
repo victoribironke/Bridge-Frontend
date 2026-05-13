@@ -97,13 +97,13 @@ const getTrustSignals = (listing: any, aiProfile: any) => {
       detail: business?.cacVerified ? "Verified" : "Not verified",
       status: business?.cacVerified ? "pass" : "warning",
     },
-    {
-      label: "Business profile",
-      detail: business?.yearsInOperation
-        ? `${business.yearsInOperation} years in operation`
-        : business?.sector,
-      status: "pass",
-    },
+    // {
+    //   label: "Business profile",
+    //   detail: business?.yearsInOperation
+    //     ? `${business.yearsInOperation} years in operation`
+    //     : business?.sector,
+    //   status: "pass",
+    // },
   ].filter((signal) => signal.detail);
 };
 
@@ -279,7 +279,7 @@ const ListingDetailPage = () => {
                     </div>
                     <h3 className="font-display text-lg">Use of funds</h3>
                   </div>
-                  <p className="mt-4 text-sm leading-relaxed text-foreground/80 line-clamp-2">
+                  <p className="mt-4 text-sm leading-relaxed text-foreground/80">
                     {listing.useOfFunds}
                   </p>
                 </div>
@@ -293,7 +293,7 @@ const ListingDetailPage = () => {
                     </div>
                     <h3 className="font-display text-lg">Expected impact</h3>
                   </div>
-                  <p className="mt-4 text-sm leading-relaxed text-foreground/80 line-clamp-2">
+                  <p className="mt-4 text-sm leading-relaxed text-foreground/80">
                     {listing.expectedImpact}
                   </p>
                 </div>
@@ -440,10 +440,10 @@ const ListingDetailPage = () => {
               <Row label="Amount" value={formatNairaFull(amount * 100)} />
               <Row label="Expected return" value={formatNairaFull(projected.expected * 100)} />
               <Row label="Projected timeline" value={`${projected.months} months`} />
-              <Row
+              {/* <Row
                 label="Default pool deduction (4%)"
                 value={formatNairaFull(Math.round(amount * 100 * 0.04))}
-              />
+              /> */}
             </div>
             <div className="mt-6 flex gap-3">
               <button
