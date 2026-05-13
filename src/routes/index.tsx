@@ -138,8 +138,25 @@ const HowItWorks = () => {
   );
 };
 
+const getListingsArray = (response: any) => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.listings)) return response.listings;
+  return [];
+};
+
+const normalizeListingCard = (item: any) => {
+  if (!item?.listings) return item;
+
+  return {
+    ...item.listings,
+    business_profiles: item.business_profiles || item.listings.business_profiles,
+    bridge_ratings: item.bridge_ratings || item.listings.bridge_ratings,
+  };
+};
+
 const FeaturedListings = () => {
-  const { data, isLoading } = useListings({ limit: 3, sort: "highest_bridge_rating" });
+  const { data, isLoading } = useListings({ limit: 100, sort: "highest_bridge_rating" });
 
   if (isLoading) {
     return (
@@ -149,52 +166,80 @@ const FeaturedListings = () => {
     );
   }
 
-  const featured = data?.data || [];
+  const featured = getListingsArray(data).map(normalizeListingCard);
 
   return (
     <section className="border-t border-border bg-secondary/40">
       <div className="mx-auto max-w-6xl px-6 py-24">
         <div className="flex items-end justify-between">
           <h2 className="font-display text-4xl md:text-5xl">Open right now</h2>
-          <Link to={PAGES.DASHBOARD_INVESTOR} className="text-sm text-primary hover:underline">
-            See all listings →
-          </Link>
         </div>
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {featured.map((l: any) => (
-            <Link
-              key={l.id}
-              to={PAGES.LISTINGS_ID}
-              params={{ id: l.id }}
-              className="group flex flex-col rounded-2xl border border-border bg-card p-6 transition-all hover:border-primary/40 hover:shadow-lg"
-            >
-              <div className="flex items-center gap-2 text-xs">
-                <span className="rounded-full border border-border px-2 py-0.5 text-muted-foreground">
-                  {l.business_profiles?.sector || "Sector"}
-                </span>
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">
-                  Tier {l.business_profiles?.tier || "1"}
-                </span>
-              </div>
-              <h3 className="mt-4 font-display text-2xl">
-                {l.business_profiles?.businessName || "Business"}
-              </h3>
-              <div className="mt-2 text-sm text-muted-foreground">
-                Standing ·{" "}
-                <span className="font-medium text-foreground">
-                  {l.bridge_ratings?.standing || "Seed"}
-                </span>
-              </div>
-              <div className="mt-6 flex items-end justify-between border-t border-border pt-4">
-                <div>
-                  <div className="text-xs text-muted-foreground">Target return</div>
-                  <div className="font-display text-2xl">{l.totalReturnPercent}%</div>
-                </div>
-                <div className="text-sm text-primary group-hover:underline">View →</div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        {featured.length === 0 ? (
+          <div className="mt-10 rounded-2xl border border-dashed border-border p-16 text-center">
+            <p className="text-lg text-muted-foreground">No open listings right now.</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Check back soon — new deals are posted regularly.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {featured.map((l: any) => {
+              const fundedPct =
+                l.capitalRequested > 0
+                  ? Math.min(100, Math.round((l.totalCommitted / l.capitalRequested) * 100))
+                  : 0;
+              return (
+                <Link
+                  key={l.id}
+                  to={PAGES.LISTINGS_ID}
+                  params={{ id: l.id }}
+                  className="group flex flex-col rounded-2xl border border-border bg-card p-6 transition-all hover:border-primary/40 hover:shadow-lg"
+                >
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="rounded-full border border-border px-2 py-0.5 text-muted-foreground">
+                      {l.business_profiles?.sector || "Sector"}
+                    </span>
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">
+                      Tier {l.business_profiles?.tier || "1"}
+                    </span>
+                  </div>
+                  <h3 className="mt-4 font-display text-2xl">
+                    {l.business_profiles?.businessName || "Business"}
+                  </h3>
+                  <div className="mt-2 text-sm text-muted-foreground">
+                    Standing ·{" "}
+                    <span className="font-medium text-foreground">
+                      {l.bridge_ratings?.standing || l.bridge_ratings?.overallStanding || "Seed"}
+                    </span>
+                  </div>
+                  <div className="mt-4">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{formatNaira(l.totalCommitted)} funded</span>
+                      <span>{l.investorCount || 0} investors</span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 rounded-full bg-secondary">
+                      <div
+                        className="h-1.5 rounded-full bg-primary transition-all"
+                        style={{ width: `${fundedPct}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-end justify-between border-t border-border pt-4">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Raising</div>
+                      <div className="font-display text-lg">{formatNaira(l.capitalRequested)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">Target return</div>
+                      <div className="font-display text-lg">{l.totalReturnPercent}%</div>
+                    </div>
+                    <div className="text-sm text-primary group-hover:underline">View →</div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
     </section>
   );
