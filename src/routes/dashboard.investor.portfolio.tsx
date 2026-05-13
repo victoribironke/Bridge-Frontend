@@ -105,7 +105,7 @@ const Portfolio = () => {
               </button>
               <button
                 onClick={() => setWithdraw(true)}
-                className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-secondary"
+                className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:bg-primary/90"
               >
                 Withdraw
               </button>
@@ -682,26 +682,36 @@ const Mini = ({ label, value }: { label: string; value: string }) => {
 };
 
 const InvestorChartsSection = () => {
+  const now = new Date();
   const [period, setPeriod] = useState<"daily" | "monthly" | "yearly">("monthly");
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
 
-  const { data: chartResponse, isLoading } = useInvestorPerformanceChart(period, year);
+  const {
+    data: chartResponse,
+    isLoading,
+    isError,
+    error,
+  } = useInvestorPerformanceChart(
+    period,
+    period === "yearly" ? undefined : year,
+    period === "daily" ? month : undefined,
+  );
 
-  // Parse data or provide rich fallback mock data to WOW the user if endpoint is empty/sandbox
-  const rawData =
-    chartResponse?.data && chartResponse.data.length > 0
-      ? chartResponse.data
-      : [
-          { label: "Jan", totalCapital: 12000000, totalReturns: 300000 },
-          { label: "Feb", totalCapital: 25000000, totalReturns: 750000 },
-          { label: "Mar", totalCapital: 40000000, totalReturns: 1400000 },
-          { label: "Apr", totalCapital: 45000000, totalReturns: 1900000 },
-          { label: "May", totalCapital: 58000000, totalReturns: 2600000 },
-          { label: "Jun", totalCapital: 72000000, totalReturns: 3500000 },
-        ];
+  const rawData = chartResponse?.data ?? [];
+  const hasData = rawData.length > 0;
 
-  const maxCap = Math.max(...rawData.map((d: any) => d.totalCapital || 0), 1000000);
-  const maxRet = Math.max(...rawData.map((d: any) => d.totalReturns || 0), 100000);
+  const yearOptions = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
+
+  const shortAxisLabel = (label: string) => {
+    const parts = label.split("-");
+    if (parts.length >= 3) return `${parts[1]}/${parts[2]}`;
+    if (parts.length === 2) return parts[1];
+    return label;
+  };
+
+  const maxPeriodReturns = Math.max(...rawData.map((d) => d.totalReturnsReceived), 1);
+  const maxCumulative = Math.max(...rawData.map((d) => d.cumulativeReturns), 1);
 
   type ChartPoint = {
     x: number;
@@ -710,45 +720,59 @@ const InvestorChartsSection = () => {
     label: string;
   };
 
-  // Helper to compute SVG points
-  const getChartPoints = (key: string, maxVal: number): ChartPoint[] => {
+  const getChartPoints = (
+    key: "totalReturnsReceived" | "cumulativeReturns",
+    maxVal: number,
+  ): ChartPoint[] => {
     const len = rawData.length;
-    return rawData.map((d: any, idx: number) => {
+    return rawData.map((d, idx) => {
       const val = d[key] || 0;
       const x = 30 + (idx / Math.max(1, len - 1)) * 340;
       const y = 130 - (val / maxVal) * 100;
-      return { x, y, val, label: d.label.replace("2025-", "").replace("2026-", "") };
+      return { x, y, val, label: shortAxisLabel(d.label) };
     });
   };
 
-  const capPoints = getChartPoints("totalCapital", maxCap);
-  const retPoints = getChartPoints("totalReturns", maxRet);
+  const periodPoints = getChartPoints("totalReturnsReceived", maxPeriodReturns);
+  const cumulativePoints = getChartPoints("cumulativeReturns", maxCumulative);
 
-  const capPolylineStr = capPoints.map((p) => `${p.x},${p.y}`).join(" ");
-  const capAreaStr =
-    capPoints.length > 0
-      ? `${capPoints[0].x},130 ${capPolylineStr} ${capPoints[capPoints.length - 1].x},130`
+  const periodPolylineStr = periodPoints.map((p) => `${p.x},${p.y}`).join(" ");
+  const periodAreaStr =
+    periodPoints.length > 0
+      ? `${periodPoints[0].x},130 ${periodPolylineStr} ${periodPoints[periodPoints.length - 1].x},130`
       : "";
 
-  const retPolylineStr = retPoints.map((p) => `${p.x},${p.y}`).join(" ");
-  const retAreaStr =
-    retPoints.length > 0
-      ? `${retPoints[0].x},130 ${retPolylineStr} ${retPoints[retPoints.length - 1].x},130`
+  const cumulativePolylineStr = cumulativePoints.map((p) => `${p.x},${p.y}`).join(" ");
+  const cumulativeAreaStr =
+    cumulativePoints.length > 0
+      ? `${cumulativePoints[0].x},130 ${cumulativePolylineStr} ${cumulativePoints[cumulativePoints.length - 1].x},130`
       : "";
+
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
 
   return (
     <section className="mt-10 rounded-3xl border border-border bg-card p-6 shadow-xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-display text-xl text-foreground">Performance analytics</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Real-time multi-dimensional tracking of deployed capital and yield generation
-          </p>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2">
           <select
             value={period}
-            onChange={(e: any) => setPeriod(e.target.value)}
+            onChange={(e) => setPeriod(e.target.value as "daily" | "monthly" | "yearly")}
             className="rounded-xl border border-border bg-secondary/50 px-3 py-1.5 text-xs text-foreground focus:outline-none"
           >
             <option value="daily">Daily</option>
@@ -758,11 +782,27 @@ const InvestorChartsSection = () => {
           {period !== "yearly" && (
             <select
               value={year}
-              onChange={(e: any) => setYear(Number(e.target.value))}
+              onChange={(e) => setYear(Number(e.target.value))}
               className="rounded-xl border border-border bg-secondary/50 px-3 py-1.5 text-xs text-foreground focus:outline-none"
             >
-              <option value={2025}>2025</option>
-              <option value={2026}>2026</option>
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          )}
+          {period === "daily" && (
+            <select
+              value={month}
+              onChange={(e) => setMonth(Number(e.target.value))}
+              className="rounded-xl border border-border bg-secondary/50 px-3 py-1.5 text-xs text-foreground focus:outline-none"
+            >
+              {monthNames.map((name, i) => (
+                <option key={name} value={i + 1}>
+                  {name}
+                </option>
+              ))}
             </select>
           )}
         </div>
@@ -772,13 +812,20 @@ const InvestorChartsSection = () => {
         <div className="flex justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
+      ) : isError ? (
+        <div className="mt-8 rounded-2xl border border-destructive/30 bg-destructive/5 py-12 text-center text-sm text-destructive px-4">
+          {error instanceof Error ? error.message : "Could not load returns data."}
+        </div>
+      ) : !hasData ? (
+        <div className="mt-8 rounded-2xl border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
+          No returns data for this selection yet.
+        </div>
       ) : (
         <div className="mt-8 grid gap-8 md:grid-cols-2">
-          {/* Capital over time line chart */}
           <div className="rounded-2xl border border-border/50 bg-secondary/10 p-4 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-              Capital over time
+              Returns received (period)
             </div>
 
             <div className="relative w-full pt-2">
@@ -798,7 +845,6 @@ const InvestorChartsSection = () => {
                   </linearGradient>
                 </defs>
 
-                {/* Grid lines */}
                 <line
                   x1="30"
                   y1="30"
@@ -826,13 +872,11 @@ const InvestorChartsSection = () => {
                   strokeOpacity="0.1"
                 />
 
-                {/* Area under curve */}
-                {capAreaStr && <polygon points={capAreaStr} fill="url(#capGradient)" />}
+                {periodAreaStr && <polygon points={periodAreaStr} fill="url(#capGradient)" />}
 
-                {/* Main line */}
-                {capPolylineStr && (
+                {periodPolylineStr && (
                   <polyline
-                    points={capPolylineStr}
+                    points={periodPolylineStr}
                     fill="none"
                     stroke="var(--color-primary, #003cbb)"
                     strokeWidth="3"
@@ -841,8 +885,7 @@ const InvestorChartsSection = () => {
                   />
                 )}
 
-                {/* Interactive points */}
-                {capPoints.map((p, idx) => (
+                {periodPoints.map((p, idx) => (
                   <g key={idx} className="group/point cursor-pointer">
                     <circle
                       cx={p.x}
@@ -858,9 +901,8 @@ const InvestorChartsSection = () => {
                 ))}
               </svg>
 
-              {/* X Axis Labels */}
               <div className="flex justify-between px-[7.5%] mt-2 text-[10px] text-muted-foreground">
-                {capPoints.map((p, idx) => (
+                {periodPoints.map((p, idx) => (
                   <span key={idx} className="truncate max-w-[50px] text-center">
                     {p.label}
                   </span>
@@ -869,11 +911,10 @@ const InvestorChartsSection = () => {
             </div>
           </div>
 
-          {/* Return over time line chart */}
           <div className="rounded-2xl border border-border/50 bg-secondary/10 p-4 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-32 h-32 bg-success/5 rounded-full blur-2xl pointer-events-none" />
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-              Return over time
+              Cumulative returns
             </div>
 
             <div className="relative w-full pt-2">
@@ -893,7 +934,6 @@ const InvestorChartsSection = () => {
                   </linearGradient>
                 </defs>
 
-                {/* Grid lines */}
                 <line
                   x1="30"
                   y1="30"
@@ -921,13 +961,13 @@ const InvestorChartsSection = () => {
                   strokeOpacity="0.1"
                 />
 
-                {/* Area under curve */}
-                {retAreaStr && <polygon points={retAreaStr} fill="url(#retGradient)" />}
+                {cumulativeAreaStr && (
+                  <polygon points={cumulativeAreaStr} fill="url(#retGradient)" />
+                )}
 
-                {/* Main line */}
-                {retPolylineStr && (
+                {cumulativePolylineStr && (
                   <polyline
-                    points={retPolylineStr}
+                    points={cumulativePolylineStr}
                     fill="none"
                     stroke="var(--color-success, #10b981)"
                     strokeWidth="3"
@@ -936,8 +976,7 @@ const InvestorChartsSection = () => {
                   />
                 )}
 
-                {/* Interactive points */}
-                {retPoints.map((p, idx) => (
+                {cumulativePoints.map((p, idx) => (
                   <g key={idx} className="group/point cursor-pointer">
                     <circle
                       cx={p.x}
@@ -953,9 +992,8 @@ const InvestorChartsSection = () => {
                 ))}
               </svg>
 
-              {/* X Axis Labels */}
               <div className="flex justify-between px-[7.5%] mt-2 text-[10px] text-muted-foreground">
-                {retPoints.map((p, idx) => (
+                {cumulativePoints.map((p, idx) => (
                   <span key={idx} className="truncate max-w-[50px] text-center">
                     {p.label}
                   </span>
