@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Field,
   FormShell,
   GhostBtn,
   Input,
   PrimaryBtn,
-  Select,
   Stepper,
   Textarea,
 } from "@/components/form-bits";
 import { useBusinessProfile, usePreviewTerms, useUserId } from "@/hooks/queries";
 import { useCreateListingMutation } from "@/hooks/mutations";
+import { useProtectedRoute } from "@/hooks/use-protected-route";
 import { BUSINESS_DASHBOARD_SNAPSHOT_KEY, PAGES } from "@/lib/constants";
 import { formatNaira, formatNairaFull } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
@@ -45,6 +45,7 @@ const cleanBackendMessage = (message?: string) => {
 };
 
 const CreateListing = () => {
+  useProtectedRoute("business");
   const navigate = useNavigate();
   const userId = useUserId();
   const [storedSnapshot] = useState<any>(() => getStoredDashboardSnapshot());
@@ -67,10 +68,7 @@ const CreateListing = () => {
 
   const businessProfile = (profileData as any)?.business_profiles || {};
   const tier = businessProfile.tier || 1;
-  const repaymentOptions = useMemo(
-    () => (tier === 1 ? [12, 15, 18] : [12, 15, 18, 21, 24]),
-    [tier],
-  );
+  const maxRepaymentMonths = tier === 1 ? 18 : 24;
   const tierCapKobo = TIER_LIMIT[tier] || TIER_LIMIT[1];
   const verifiedMonthlyRevenueKobo = Number(businessProfile.monoAverageMonthlyInflow || 0);
   const revenueMultipleCapKobo = Math.floor(verifiedMonthlyRevenueKobo * 1.5);
@@ -79,7 +77,10 @@ const CreateListing = () => {
   const requestedCapitalKobo = capital * 100;
   const capitalValid = capital > 0 && requestedCapitalKobo <= limitKobo;
   const canCalculateTerms =
-    step === 1 && capitalValid && repaymentOptions.includes(preferredRepaymentMonths);
+    step === 1 &&
+    capitalValid &&
+    preferredRepaymentMonths >= 1 &&
+    preferredRepaymentMonths <= maxRepaymentMonths;
 
   const {
     data: termsData,
@@ -92,7 +93,7 @@ const CreateListing = () => {
   const termsErrorMessage = cleanBackendMessage(termsError?.message);
   const shouldOffer18Months =
     isTermsError &&
-    repaymentOptions.includes(18) &&
+    maxRepaymentMonths >= 18 &&
     preferredRepaymentMonths !== 18 &&
     termsErrorMessage.includes("18 months");
 
@@ -103,10 +104,10 @@ const CreateListing = () => {
   }, [capital, limitNaira]);
 
   useEffect(() => {
-    if (!repaymentOptions.includes(preferredRepaymentMonths)) {
-      setPreferredRepaymentMonths(repaymentOptions[repaymentOptions.length - 1]);
+    if (preferredRepaymentMonths > maxRepaymentMonths) {
+      setPreferredRepaymentMonths(maxRepaymentMonths);
     }
-  }, [preferredRepaymentMonths, repaymentOptions]);
+  }, [preferredRepaymentMonths, maxRepaymentMonths]);
 
   if (!profileData && isProfileLoading) {
     return (
@@ -224,16 +225,39 @@ const CreateListing = () => {
               />
             </Field>
             <Field label="Preferred repayment period">
-              <Select
-                value={preferredRepaymentMonths}
-                onChange={(e) => setPreferredRepaymentMonths(Number(e.target.value))}
-              >
-                {repaymentOptions.map((months) => (
-                  <option key={months} value={months}>
-                    {months} months
-                  </option>
-                ))}
-              </Select>
+              <div className="mt-2">
+                <div className="flex items-baseline justify-between">
+                  <div className="font-display text-3xl text-foreground">
+                    {preferredRepaymentMonths}
+                    <span className="ml-1 text-base font-normal text-muted-foreground">
+                      month{preferredRepaymentMonths !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    Max {maxRepaymentMonths} months (Tier {tier})
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={maxRepaymentMonths}
+                  step={1}
+                  value={preferredRepaymentMonths}
+                  onChange={(e) => setPreferredRepaymentMonths(Number(e.target.value))}
+                  className="mt-3 w-full cursor-pointer appearance-none bg-transparent
+                    [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-secondary
+                    [&::-webkit-slider-thumb]:mt-[-4px] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110
+                    [&::-moz-range-track]:h-2 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-secondary
+                    [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:shadow-md"
+                />
+                <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground">
+                  <span>1</span>
+                  <span>6</span>
+                  <span>12</span>
+                  {maxRepaymentMonths >= 18 && <span>18</span>}
+                  {maxRepaymentMonths >= 24 && <span>24</span>}
+                </div>
+              </div>
             </Field>
             <Field label="Use of funds" hint={`${useFunds.length}/80 minimum — be specific.`}>
               <Textarea
