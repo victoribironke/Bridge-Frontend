@@ -209,9 +209,9 @@ const Footer = () => {
           © {new Date().getFullYear()} Bridge. Capital that meets businesses where they are.
         </div>
         <div className="flex gap-6">
-          <a href="#" className="hover:text-foreground">
+          <Link to={PAGES.TERMS} className="hover:text-foreground">
             Terms
-          </a>
+          </Link>
           <a href="#" className="hover:text-foreground">
             Privacy
           </a>
