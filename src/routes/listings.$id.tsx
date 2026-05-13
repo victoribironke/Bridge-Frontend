@@ -423,7 +423,7 @@ const ListingDetailPage = () => {
 
                 <button
                   onClick={handleInvest}
-                  disabled={amount < 50000 || amount > maxInvestNaira}
+                  disabled={amount === 0 || amount > maxInvestNaira}
                   className="mt-6 w-full rounded-md bg-primary px-4 py-3 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
                   Commit capital
