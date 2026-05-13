@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
@@ -23,6 +24,11 @@ import { Route as DashboardInvestorPortfolioRouteImport } from './routes/dashboa
 import { Route as DashboardBusinessPaymentsRouteImport } from './routes/dashboard.business.payments'
 import { Route as DashboardBusinessCreateListingRouteImport } from './routes/dashboard.business.create-listing'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
+  '/terms': typeof TermsRoute
   '/business/$id': typeof BusinessIdRoute
   '/listings/$id': typeof ListingsIdRoute
   '/register/business': typeof RegisterBusinessRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
+  '/terms': typeof TermsRoute
   '/business/$id': typeof BusinessIdRoute
   '/listings/$id': typeof ListingsIdRoute
   '/register/business': typeof RegisterBusinessRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/notifications': typeof NotificationsRoute
+  '/terms': typeof TermsRoute
   '/business/$id': typeof BusinessIdRoute
   '/listings/$id': typeof ListingsIdRoute
   '/register/business': typeof RegisterBusinessRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/notifications'
+    | '/terms'
     | '/business/$id'
     | '/listings/$id'
     | '/register/business'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/notifications'
+    | '/terms'
     | '/business/$id'
     | '/listings/$id'
     | '/register/business'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/notifications'
+    | '/terms'
     | '/business/$id'
     | '/listings/$id'
     | '/register/business'
@@ -190,6 +202,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   NotificationsRoute: typeof NotificationsRoute
+  TermsRoute: typeof TermsRoute
   BusinessIdRoute: typeof BusinessIdRoute
   ListingsIdRoute: typeof ListingsIdRoute
   RegisterBusinessRoute: typeof RegisterBusinessRoute
@@ -204,6 +217,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/notifications': {
       id: '/notifications'
       path: '/notifications'
@@ -302,6 +322,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   NotificationsRoute: NotificationsRoute,
+  TermsRoute: TermsRoute,
   BusinessIdRoute: BusinessIdRoute,
   ListingsIdRoute: ListingsIdRoute,
   RegisterBusinessRoute: RegisterBusinessRoute,
