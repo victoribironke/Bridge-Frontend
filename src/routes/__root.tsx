@@ -128,20 +128,27 @@ const Header = () => {
               <Link
                 to={PAGES.DASHBOARD_INVESTOR}
                 className="text-muted-foreground hover:text-foreground"
-                activeProps={{ className: "text-foreground font-medium" }}
+                activeProps={{
+                  className: "bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium",
+                }}
               >
-                Browse
+                Dashboard
               </Link>
               <Link
                 to={PAGES.DASHBOARD_INVESTOR_PORTFOLIO}
                 className="text-muted-foreground hover:text-foreground"
-                activeProps={{ className: "text-foreground font-medium" }}
+                activeProps={{
+                  className: "bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium",
+                }}
               >
                 Portfolio
               </Link>
               <Link
                 to={PAGES.NOTIFICATIONS}
                 className="text-muted-foreground hover:text-foreground"
+                activeProps={{
+                  className: "bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium",
+                }}
               >
                 Notifications
               </Link>
@@ -152,19 +159,27 @@ const Header = () => {
               <Link
                 to={PAGES.DASHBOARD_BUSINESS}
                 className="text-muted-foreground hover:text-foreground"
-                activeProps={{ className: "text-foreground font-medium" }}
+                activeProps={{
+                  className: "bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium",
+                }}
               >
                 Dashboard
               </Link>
               <Link
                 to={PAGES.DASHBOARD_BUSINESS_PAYMENTS}
                 className="text-muted-foreground hover:text-foreground"
+                activeProps={{
+                  className: "bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium",
+                }}
               >
                 Payments
               </Link>
               <Link
                 to={PAGES.NOTIFICATIONS}
                 className="text-muted-foreground hover:text-foreground"
+                activeProps={{
+                  className: "bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium",
+                }}
               >
                 Notifications
               </Link>
