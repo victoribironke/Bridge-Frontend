@@ -232,17 +232,42 @@ export const useBusinessRevenueChart = (period: string, year?: number, month?: n
   });
 };
 
-export const useInvestorPerformanceChart = (period: string, year?: number, month?: number) => {
+export type InvestorReturnsPeriod = "daily" | "monthly" | "yearly";
+
+export type InvestorReturnsRow = {
+  label: string;
+  totalReturnsReceived: number;
+  cumulativeReturns: number;
+};
+
+export type InvestorReturnsResponse = {
+  period: InvestorReturnsPeriod;
+  year: number | null;
+  month: number | null;
+  data: InvestorReturnsRow[];
+};
+
+/** GET /investor/:userId/returns — amounts in kobo; `year`/`month` rules match backend validation. */
+export const useInvestorPerformanceChart = (
+  period: InvestorReturnsPeriod,
+  year?: number,
+  month?: number,
+) => {
   const userId = useUserId();
+
+  const paramsReady =
+    period === "yearly" ||
+    (period === "monthly" && year != null) ||
+    (period === "daily" && year != null && month != null);
+
+  const params: Record<string, string | number> = { period };
+  if (period !== "yearly" && year != null) params.year = year;
+  if (period === "daily" && month != null) params.month = month;
+
   return useQuery({
     queryKey: ["investor-performance-chart", userId, period, year, month],
-    queryFn: () => {
-      const params = new URLSearchParams();
-      params.append("period", period);
-      if (year) params.append("year", year.toString());
-      if (month) params.append("month", month.toString());
-      return apiFetch<any>(`/investor/${userId}/performance?${params.toString()}`);
-    },
-    enabled: !!userId,
+    queryFn: () => apiFetch<InvestorReturnsResponse>(`/investor/${userId}/returns`, { params }),
+    enabled: !!userId && paramsReady,
+    staleTime: DASHBOARD_STALE_TIME,
   });
 };
