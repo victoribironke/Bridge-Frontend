@@ -411,7 +411,7 @@ const ListingDetailPage = () => {
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-lg font-medium focus:outline-none focus:ring-2 focus:ring-ring"
                 />
                 <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-                  <span>Min ₦50,000</span>
+                  {/* <span>Min ₦50,000</span> */}
                   <span>Max {formatNairaFull(remainingKobo)}</span>
                 </div>
 
