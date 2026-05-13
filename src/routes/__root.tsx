@@ -133,8 +133,7 @@ const Header = () => {
                 to={PAGES.DASHBOARD_INVESTOR}
                 className={cn(
                   "text-muted-foreground hover:text-foreground",
-                  pathname === PAGES.DASHBOARD_INVESTOR &&
-                    "bg-primary text-primary-foreground px-2 py-1 rounded-md hover:text-primary-foreground",
+                  pathname === PAGES.DASHBOARD_INVESTOR && "text-primary hover:text-primary",
                 )}
               >
                 Dashboard
@@ -144,7 +143,7 @@ const Header = () => {
                 className={cn(
                   "text-muted-foreground hover:text-foreground",
                   pathname === PAGES.DASHBOARD_INVESTOR_PORTFOLIO &&
-                    "bg-primary text-primary-foreground px-2 py-1 rounded-md hover:text-primary-foreground",
+                    "text-primary hover:text-primary",
                 )}
               >
                 Portfolio
@@ -153,8 +152,7 @@ const Header = () => {
                 to={PAGES.NOTIFICATIONS}
                 className={cn(
                   "text-muted-foreground hover:text-foreground",
-                  pathname === PAGES.NOTIFICATIONS &&
-                    "bg-primary text-primary-foreground px-2 py-1 rounded-md hover:text-primary-foreground",
+                  pathname === PAGES.NOTIFICATIONS && "text-primary hover:text-primary",
                 )}
               >
                 Notifications
@@ -167,8 +165,7 @@ const Header = () => {
                 to={PAGES.DASHBOARD_BUSINESS}
                 className={cn(
                   "text-muted-foreground hover:text-foreground",
-                  pathname === PAGES.DASHBOARD_BUSINESS &&
-                    "bg-primary text-primary-foreground px-2 py-1 rounded-md hover:text-primary-foreground",
+                  pathname === PAGES.DASHBOARD_BUSINESS && "text-primary hover:text-primary",
                 )}
               >
                 Dashboard
@@ -178,7 +175,7 @@ const Header = () => {
                 className={cn(
                   "text-muted-foreground hover:text-foreground",
                   pathname === PAGES.DASHBOARD_BUSINESS_PAYMENTS &&
-                    "bg-primary text-primary-foreground px-2 py-1 rounded-md hover:text-primary-foreground",
+                    "text-primary hover:text-primary",
                 )}
               >
                 Payments
@@ -187,8 +184,7 @@ const Header = () => {
                 to={PAGES.NOTIFICATIONS}
                 className={cn(
                   "text-muted-foreground hover:text-foreground",
-                  pathname === PAGES.NOTIFICATIONS &&
-                    "bg-primary text-primary-foreground px-2 py-1 rounded-md hover:text-primary-foreground",
+                  pathname === PAGES.NOTIFICATIONS && "text-primary hover:text-primary",
                 )}
               >
                 Notifications
