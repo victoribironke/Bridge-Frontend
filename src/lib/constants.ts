@@ -4,6 +4,7 @@ export const BUSINESS_DASHBOARD_SNAPSHOT_KEY = "bridge.businessDashboardSnapshot
 export const PAGES = {
   HOME: "/",
   NOTIFICATIONS: "/notifications",
+  TERMS: "/terms",
   REGISTER_BUSINESS: "/register/business",
   REGISTER_INVESTOR: "/register/investor",
   DASHBOARD_INVESTOR: "/dashboard/investor",
