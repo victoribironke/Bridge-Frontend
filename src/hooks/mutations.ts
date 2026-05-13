@@ -155,6 +155,33 @@ export const useInvestMutation = () => {
   });
 };
 
+export const useDepositMutation = () => {
+  const queryClient = useQueryClient();
+  const { token } = useAuth();
+
+  const getUserId = () => {
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      return payload.sub || payload.id || null;
+    } catch {
+      return null;
+    }
+  };
+
+  return useMutation({
+    mutationFn: (amount: number) => {
+      const userId = getUserId();
+      if (!userId) throw new Error("Not authenticated");
+      return apiFetch<any>(`/investor/${userId}/deposit`, { method: "POST", body: { amount } });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["investor-wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["investor-summary"] });
+    },
+  });
+};
+
 export const useUpdatePreferencesMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
