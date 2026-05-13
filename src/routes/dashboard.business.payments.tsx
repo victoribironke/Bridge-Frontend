@@ -8,12 +8,14 @@ import {
   usePayouts,
 } from "@/hooks/queries";
 import { usePayoutAccountLookupMutation, usePayoutTransferMutation } from "@/hooks/mutations";
+import { useProtectedRoute } from "@/hooks/use-protected-route";
 import { useAuth } from "@/lib/auth";
 import { formatNaira, formatNairaFull } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const Payments = () => {
+  useProtectedRoute("business");
   const { virtualAccountNumber } = useAuth();
   const { data: linkData, isLoading: isLinkLoading } = useBusinessPaymentLink();
   const { data: sweepSummary, isLoading: isSweepLoading } = useBusinessSweepSummary();
