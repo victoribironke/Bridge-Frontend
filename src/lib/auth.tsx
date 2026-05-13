@@ -1,8 +1,18 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { apiFetch } from "./api-client";
 
 export type UserType = "guest" | "investor" | "business";
+
+export const isTokenExpired = (token: string): boolean => {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    if (!payload.exp) return false;
+    // 30-second buffer to account for clock skew
+    return payload.exp < Date.now() / 1000 - 30;
+  } catch {
+    return true;
+  }
+};
 
 export type AuthState = {
   token: string | null;
@@ -46,13 +56,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          setAuthState({
-            token: parsed.token || null,
-            userType: parsed.userType || "guest",
-            virtualAccountNumber: parsed.virtualAccountNumber || null,
-          });
-        } catch (e) {
-          // invalid stored state
+          const storedToken = parsed.token || null;
+
+          // Auto-clear expired tokens on boot
+          if (storedToken && isTokenExpired(storedToken)) {
+            window.localStorage.removeItem(KEY);
+          } else {
+            setAuthState({
+              token: storedToken,
+              userType: parsed.userType || "guest",
+              virtualAccountNumber: parsed.virtualAccountNumber || null,
+            });
+          }
+        } catch {
+          window.localStorage.removeItem(KEY);
         }
       }
       setIsLoading(false);
