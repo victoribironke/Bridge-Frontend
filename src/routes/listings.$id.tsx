@@ -279,7 +279,7 @@ const ListingDetailPage = () => {
                     </div>
                     <h3 className="font-display text-lg">Use of funds</h3>
                   </div>
-                  <p className="mt-4 text-sm leading-relaxed text-foreground/80">
+                  <p className="mt-4 text-sm leading-relaxed text-foreground/80 line-clamp-2">
                     {listing.useOfFunds}
                   </p>
                 </div>
@@ -293,7 +293,7 @@ const ListingDetailPage = () => {
                     </div>
                     <h3 className="font-display text-lg">Expected impact</h3>
                   </div>
-                  <p className="mt-4 text-sm leading-relaxed text-foreground/80">
+                  <p className="mt-4 text-sm leading-relaxed text-foreground/80 line-clamp-2">
                     {listing.expectedImpact}
                   </p>
                 </div>
