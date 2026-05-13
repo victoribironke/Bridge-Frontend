@@ -113,7 +113,7 @@ const ListingDetailPage = () => {
   const listing = useMemo(() => normalizeListingResponse(listingResponse), [listingResponse]);
   const { userType: role } = useAuth();
   const navigate = useNavigate();
-  const [amount, setAmount] = useState<number>(50_000);
+  const [amount, setAmount] = useState<number>(0);
   const [showConfirm, setShowConfirm] = useState(false);
   const investMut = useInvestMutation();
 
@@ -403,9 +403,7 @@ const ListingDetailPage = () => {
                 </label>
                 <input
                   type="number"
-                  min={50000}
                   max={maxInvestNaira}
-                  step={5000}
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value) || 0)}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-lg font-medium focus:outline-none focus:ring-2 focus:ring-ring"
