@@ -113,10 +113,10 @@ export const usePayoutTransferMutation = () => {
   return useMutation({
     mutationFn: (data: {
       amount: string;
-      bankCode: string;
-      accountNumber: string;
-      accountName: string;
-      remark: string;
+      bankCode?: string;
+      accountNumber?: string;
+      accountName?: string;
+      remark?: string;
     }) => apiFetch<any>("/payouts/transfer", { method: "POST", body: data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payouts"] });
