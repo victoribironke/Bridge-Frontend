@@ -6,12 +6,14 @@ import {
   useRouter,
   useNavigate,
   HeadContent,
+  useLocation,
   Scripts,
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
 import { AuthProvider, useAuth, type UserType } from "@/lib/auth";
 import { PAGES } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 const NotFoundComponent = () => {
   return (
@@ -108,6 +110,8 @@ const Header = () => {
   const { userType, logout } = useAuth();
   const navigate = useNavigate();
 
+  const pathname = useLocation().pathname;
+
   const handleLogout = () => {
     logout();
     navigate({ to: PAGES.HOME });
@@ -127,28 +131,31 @@ const Header = () => {
             <>
               <Link
                 to={PAGES.DASHBOARD_INVESTOR}
-                className="text-muted-foreground hover:text-foreground"
-                activeProps={{
-                  className: "bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium",
-                }}
+                className={cn(
+                  "text-muted-foreground hover:text-foreground",
+                  pathname === PAGES.DASHBOARD_INVESTOR &&
+                    "bg-primary text-primary-foreground px-2 py-1 rounded-md hover:text-primary-foreground",
+                )}
               >
                 Dashboard
               </Link>
               <Link
                 to={PAGES.DASHBOARD_INVESTOR_PORTFOLIO}
-                className="text-muted-foreground hover:text-foreground"
-                activeProps={{
-                  className: "bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium",
-                }}
+                className={cn(
+                  "text-muted-foreground hover:text-foreground",
+                  pathname === PAGES.DASHBOARD_INVESTOR_PORTFOLIO &&
+                    "bg-primary text-primary-foreground px-2 py-1 rounded-md hover:text-primary-foreground",
+                )}
               >
                 Portfolio
               </Link>
               <Link
                 to={PAGES.NOTIFICATIONS}
-                className="text-muted-foreground hover:text-foreground"
-                activeProps={{
-                  className: "bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium",
-                }}
+                className={cn(
+                  "text-muted-foreground hover:text-foreground",
+                  pathname === PAGES.NOTIFICATIONS &&
+                    "bg-primary text-primary-foreground px-2 py-1 rounded-md hover:text-primary-foreground",
+                )}
               >
                 Notifications
               </Link>
@@ -158,28 +165,31 @@ const Header = () => {
             <>
               <Link
                 to={PAGES.DASHBOARD_BUSINESS}
-                className="text-muted-foreground hover:text-foreground"
-                activeProps={{
-                  className: "bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium",
-                }}
+                className={cn(
+                  "text-muted-foreground hover:text-foreground",
+                  pathname === PAGES.DASHBOARD_BUSINESS &&
+                    "bg-primary text-primary-foreground px-2 py-1 rounded-md hover:text-primary-foreground",
+                )}
               >
                 Dashboard
               </Link>
               <Link
                 to={PAGES.DASHBOARD_BUSINESS_PAYMENTS}
-                className="text-muted-foreground hover:text-foreground"
-                activeProps={{
-                  className: "bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium",
-                }}
+                className={cn(
+                  "text-muted-foreground hover:text-foreground",
+                  pathname === PAGES.DASHBOARD_BUSINESS_PAYMENTS &&
+                    "bg-primary text-primary-foreground px-2 py-1 rounded-md hover:text-primary-foreground",
+                )}
               >
                 Payments
               </Link>
               <Link
                 to={PAGES.NOTIFICATIONS}
-                className="text-muted-foreground hover:text-foreground"
-                activeProps={{
-                  className: "bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium",
-                }}
+                className={cn(
+                  "text-muted-foreground hover:text-foreground",
+                  pathname === PAGES.NOTIFICATIONS &&
+                    "bg-primary text-primary-foreground px-2 py-1 rounded-md hover:text-primary-foreground",
+                )}
               >
                 Notifications
               </Link>
