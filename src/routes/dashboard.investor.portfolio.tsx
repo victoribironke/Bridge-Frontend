@@ -8,16 +8,33 @@ import {
   usePaymentLink,
   useInvestorPerformanceChart,
 } from "@/hooks/queries";
+import { useProtectedRoute } from "@/hooks/use-protected-route";
+import {
+  useDepositMutation,
+  usePayoutAccountLookupMutation,
+  usePayoutTransferMutation,
+} from "@/hooks/mutations";
 import { formatNaira, formatNairaFull } from "@/lib/utils";
 import { Loader2, Copy, Check } from "lucide-react";
+import { toast } from "sonner";
 
 const Portfolio = () => {
+  useProtectedRoute("investor");
   const [tab, setTab] = useState<"active" | "completed" | "defaulted">("active");
   const [withdraw, setWithdraw] = useState(false);
   const [fundModal, setFundModal] = useState(false);
+  const [fundTab, setFundTab] = useState<"bank" | "sandbox">("bank");
   const [linkGenerated, setLinkGenerated] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [withdrawForm, setWithdrawForm] = useState({
+    amount: "",
+    bankCode: "",
+    accountNumber: "",
+    remark: "Bridge payout withdrawal",
+  });
+  const [verifiedAccount, setVerifiedAccount] = useState<any>(null);
 
   const { data: summary, isLoading: isSummaryLoading } = useInvestorSummary();
   const { data: wallet, isLoading: isWalletLoading } = useInvestorWallet();
@@ -27,6 +44,9 @@ const Portfolio = () => {
     isLoading: isPaymentLoading,
     refetch: refetchPaymentLink,
   } = usePaymentLink();
+  const depositMut = useDepositMutation();
+  const accountLookupMut = usePayoutAccountLookupMutation();
+  const transferMut = usePayoutTransferMutation();
 
   const deals = dealsData || [];
   const activeDeals = deals.filter((d: any) => d.status === "active");
@@ -210,18 +230,156 @@ const Portfolio = () => {
       </section>
 
       {withdraw && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-2xl">
-            <h3 className="font-display text-2xl">Withdraw to bank</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Withdrawals are coming soon. We'll email you when they're live.
-            </p>
-            <button
-              onClick={() => setWithdraw(false)}
-              className="mt-6 w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-            >
-              Got it
-            </button>
+        <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-display text-2xl">Withdraw to bank</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Verify the destination account before initiating a payout.
+                </p>
+              </div>
+              <button
+                onClick={() => setWithdraw(false)}
+                className="rounded-md border border-input px-3 py-1.5 text-sm hover:bg-secondary"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <label className="block">
+                <span className="text-sm font-medium">Amount (₦)</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={withdrawForm.amount}
+                  onChange={(e) => {
+                    setWithdrawForm((c) => ({ ...c, amount: e.target.value }));
+                  }}
+                  className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium">Bank code</span>
+                <input
+                  value={withdrawForm.bankCode}
+                  onChange={(e) => {
+                    setWithdrawForm((c) => ({ ...c, bankCode: e.target.value }));
+                    setVerifiedAccount(null);
+                  }}
+                  placeholder="e.g. 000013"
+                  className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Enter the NIP bank code for the destination bank.
+                </span>
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium">Account number</span>
+                <input
+                  value={withdrawForm.accountNumber}
+                  onChange={(e) => {
+                    setWithdrawForm((c) => ({ ...c, accountNumber: e.target.value }));
+                    setVerifiedAccount(null);
+                  }}
+                  maxLength={10}
+                  className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium">Remark</span>
+                <input
+                  value={withdrawForm.remark}
+                  onChange={(e) => {
+                    setWithdrawForm((c) => ({ ...c, remark: e.target.value }));
+                  }}
+                  className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </label>
+
+              <button
+                disabled={
+                  accountLookupMut.isPending ||
+                  !withdrawForm.bankCode ||
+                  withdrawForm.accountNumber.length !== 10
+                }
+                onClick={() => {
+                  accountLookupMut.mutate(
+                    {
+                      bankCode: withdrawForm.bankCode,
+                      accountNumber: withdrawForm.accountNumber,
+                    },
+                    {
+                      onSuccess: (data) => {
+                        setVerifiedAccount(data);
+                        toast.success(`Verified ${data.accountName}`);
+                      },
+                      onError: (err) => {
+                        toast.error(err.message || "Account lookup failed.");
+                      },
+                    },
+                  );
+                }}
+                className="w-full rounded-md border border-input px-4 py-2.5 text-sm font-medium hover:bg-secondary disabled:opacity-50"
+              >
+                {accountLookupMut.isPending ? (
+                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                ) : (
+                  "Verify account"
+                )}
+              </button>
+
+              {verifiedAccount && (
+                <div className="rounded-xl border border-success/40 bg-success/10 p-3 text-sm">
+                  <div className="font-medium text-success">Account verified</div>
+                  <div className="mt-1 text-muted-foreground">{verifiedAccount.accountName}</div>
+                </div>
+              )}
+
+              <button
+                disabled={!verifiedAccount || transferMut.isPending || !withdrawForm.amount}
+                onClick={() => {
+                  const amountKobo = Math.round(Number(withdrawForm.amount) * 100);
+                  if (!amountKobo || amountKobo <= 0) {
+                    toast.error("Enter a valid withdrawal amount.");
+                    return;
+                  }
+                  transferMut.mutate(
+                    {
+                      amount: String(amountKobo),
+                      bankCode: verifiedAccount.bankCode,
+                      accountNumber: verifiedAccount.accountNumber,
+                      accountName: verifiedAccount.accountName,
+                      remark: withdrawForm.remark || "Bridge payout withdrawal",
+                    },
+                    {
+                      onSuccess: () => {
+                        toast.success("Withdrawal initiated.");
+                        setWithdraw(false);
+                        setWithdrawForm({
+                          amount: "",
+                          bankCode: "",
+                          accountNumber: "",
+                          remark: "Bridge payout withdrawal",
+                        });
+                        setVerifiedAccount(null);
+                      },
+                      onError: (err) => {
+                        toast.error(err.message || "Withdrawal failed.");
+                      },
+                    },
+                  );
+                }}
+                className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {transferMut.isPending ? (
+                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                ) : (
+                  "Confirm withdrawal"
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -229,107 +387,183 @@ const Portfolio = () => {
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-2xl">
             <h3 className="font-display text-2xl text-foreground">Fund your wallet</h3>
-            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-              Transfer funds directly via bank transfer or instantly generate a secure card/USSD
-              payment link.
-            </p>
 
-            {isPaymentLoading ? (
-              <div className="flex justify-center py-10">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : paymentData ? (
-              <div className="mt-6 space-y-4 text-left">
-                <div className="rounded-2xl border border-border bg-secondary/30 p-4 text-center">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Dedicated Virtual Account
-                  </div>
-                  <div className="mt-2 font-display text-3xl tracking-wider text-primary">
-                    {paymentData.virtualAccountNumber || "N/A"}
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">Bank: Squad / GTBank</div>
-                </div>
+            <div className="mt-4 inline-flex rounded-full border border-border bg-secondary/40 p-0.5 text-sm">
+              <button
+                onClick={() => setFundTab("bank")}
+                className={
+                  "rounded-full px-4 py-1.5 " +
+                  (fundTab === "bank"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground")
+                }
+              >
+                Bank Transfer
+              </button>
+              <button
+                onClick={() => setFundTab("sandbox")}
+                className={
+                  "rounded-full px-4 py-1.5 " +
+                  (fundTab === "sandbox"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground")
+                }
+              >
+                Simulate Deposit
+              </button>
+            </div>
 
-                {!linkGenerated ? (
-                  <button
-                    onClick={async () => {
-                      setIsGenerating(true);
-                      await refetchPaymentLink();
-                      setIsGenerating(false);
-                      setLinkGenerated(true);
-                    }}
-                    disabled={isGenerating}
-                    className="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-xl border border-primary px-4 py-3 text-xs font-medium text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Generating link...
-                      </>
-                    ) : (
-                      "Generate payment link"
-                    )}
-                  </button>
-                ) : paymentData.paymentLink ? (
-                  <div className="rounded-2xl border border-border bg-card p-4 space-y-3 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Instant Checkout Link
+            {fundTab === "bank" && (
+              <>
+                {isPaymentLoading ? (
+                  <div className="flex justify-center py-10">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : paymentData ? (
+                  <div className="mt-6 space-y-4 text-left">
+                    <div className="rounded-2xl border border-border bg-secondary/30 p-4 text-center">
+                      <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Dedicated Virtual Account
+                      </div>
+                      <div className="mt-2 font-display text-3xl tracking-wider text-primary">
+                        {paymentData.virtualAccountNumber || "N/A"}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">Bank: Squad / GTBank</div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Use this unique link to fund via Debit Card, USSD, or Bank Transfers
-                      instantly.
-                    </p>
 
-                    <div className="flex items-center gap-2 bg-secondary/50 border border-border rounded-xl p-2.5">
-                      <input
-                        type="text"
-                        readOnly
-                        value={paymentData.paymentLink}
-                        className="bg-transparent text-xs text-foreground w-full focus:outline-none truncate"
-                      />
+                    {!linkGenerated ? (
                       <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(paymentData.paymentLink);
-                          setCopied(true);
-                          setTimeout(() => setCopied(false), 2000);
+                        onClick={async () => {
+                          setIsGenerating(true);
+                          await refetchPaymentLink();
+                          setIsGenerating(false);
+                          setLinkGenerated(true);
                         }}
-                        className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                        title="Copy link"
+                        disabled={isGenerating}
+                        className="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-xl border border-primary px-4 py-3 text-xs font-medium text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
                       >
-                        {copied ? (
-                          <Check className="h-3.5 w-3.5 text-success" />
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Generating link...
+                          </>
                         ) : (
-                          <Copy className="h-3.5 w-3.5" />
+                          "Generate payment link"
                         )}
                       </button>
-                    </div>
+                    ) : paymentData.paymentLink ? (
+                      <div className="rounded-2xl border border-border bg-card p-4 space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Instant Checkout Link
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Use this unique link to fund via Debit Card, USSD, or Bank Transfers
+                          instantly.
+                        </p>
 
-                    <a
-                      href={paymentData.paymentLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-                    >
-                      Launch Squad Checkout →
-                    </a>
+                        <div className="flex items-center gap-2 bg-secondary/50 border border-border rounded-xl p-2.5">
+                          <input
+                            type="text"
+                            readOnly
+                            value={paymentData.paymentLink}
+                            className="bg-transparent text-xs text-foreground w-full focus:outline-none truncate"
+                          />
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(paymentData.paymentLink);
+                              setCopied(true);
+                              setTimeout(() => setCopied(false), 2000);
+                            }}
+                            className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                            title="Copy link"
+                          >
+                            {copied ? (
+                              <Check className="h-3.5 w-3.5 text-success" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
+
+                        <a
+                          href={paymentData.paymentLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                        >
+                          Launch Squad Checkout →
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="text-center text-xs text-muted-foreground py-2">
+                        Payment link generation unavailable.
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div className="text-center text-xs text-muted-foreground py-2">
-                    Payment link generation unavailable.
+                  <div className="mt-6 rounded-xl border border-destructive/20 bg-destructive/5 py-4 text-center text-sm text-destructive">
+                    Failed to load dedicated payment details.
                   </div>
                 )}
-              </div>
-            ) : (
-              <div className="mt-6 rounded-xl border border-destructive/20 bg-destructive/5 py-4 text-center text-sm text-destructive">
-                Failed to load dedicated payment details.
+              </>
+            )}
+
+            {fundTab === "sandbox" && (
+              <div className="mt-6 space-y-4">
+                <div className="rounded-xl border border-warning/30 bg-warning/5 p-3">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-warning">
+                    Sandbox only
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Simulates an external bank deposit into your virtual account. Credits appear
+                    instantly in your ledger balance.
+                  </p>
+                </div>
+                <label className="block">
+                  <span className="text-sm font-medium">Amount (₦)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    placeholder="e.g. 50000"
+                    className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </label>
+                <button
+                  disabled={depositMut.isPending || !depositAmount || Number(depositAmount) <= 0}
+                  onClick={() => {
+                    const amountKobo = Math.round(Number(depositAmount) * 100);
+                    depositMut.mutate(amountKobo, {
+                      onSuccess: () => {
+                        toast.success(
+                          `₦${Number(depositAmount).toLocaleString()} deposited successfully.`,
+                        );
+                        setDepositAmount("");
+                      },
+                      onError: (err) => {
+                        toast.error(err.message || "Deposit simulation failed.");
+                      },
+                    });
+                  }}
+                  className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {depositMut.isPending ? (
+                    <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                  ) : (
+                    "Simulate Deposit"
+                  )}
+                </button>
               </div>
             )}
 
             <button
               onClick={() => {
                 setFundModal(false);
-                // optionally reset generated view state on close
-                setTimeout(() => setLinkGenerated(false), 300);
+                setTimeout(() => {
+                  setLinkGenerated(false);
+                  setFundTab("bank");
+                }, 300);
               }}
               className="mt-8 w-full rounded-xl bg-secondary px-4 py-2.5 text-sm font-medium text-foreground hover:bg-secondary/80 transition-colors"
             >
