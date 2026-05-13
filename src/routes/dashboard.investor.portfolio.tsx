@@ -9,11 +9,7 @@ import {
   useInvestorPerformanceChart,
 } from "@/hooks/queries";
 import { useProtectedRoute } from "@/hooks/use-protected-route";
-import {
-  useDepositMutation,
-  usePayoutAccountLookupMutation,
-  usePayoutTransferMutation,
-} from "@/hooks/mutations";
+import { useDepositMutation, usePayoutTransferMutation } from "@/hooks/mutations";
 import { formatNaira, formatNairaFull } from "@/lib/utils";
 import { Loader2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -28,13 +24,7 @@ const Portfolio = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
-  const [withdrawForm, setWithdrawForm] = useState({
-    amount: "",
-    bankCode: "",
-    accountNumber: "",
-    remark: "Bridge payout withdrawal",
-  });
-  const [verifiedAccount, setVerifiedAccount] = useState<any>(null);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
 
   const { data: summary, isLoading: isSummaryLoading } = useInvestorSummary();
   const { data: wallet, isLoading: isWalletLoading } = useInvestorWallet();
@@ -45,7 +35,6 @@ const Portfolio = () => {
     refetch: refetchPaymentLink,
   } = usePaymentLink();
   const depositMut = useDepositMutation();
-  const accountLookupMut = usePayoutAccountLookupMutation();
   const transferMut = usePayoutTransferMutation();
 
   const deals = dealsData || [];
@@ -83,7 +72,7 @@ const Portfolio = () => {
         )}
       </section>
 
-      <section className="mt-6 grid gap-4 md:grid-cols-2">
+      <section className="mt-6 grid gap-4">
         <div className="rounded-2xl border border-border bg-card p-5">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">
             Squad wallet balance
@@ -112,7 +101,7 @@ const Portfolio = () => {
             </div>
           </div>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-5">
+        {/* <div className="rounded-2xl border border-border bg-card p-5">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">
             Default pool balance
           </div>
@@ -123,7 +112,7 @@ const Portfolio = () => {
               formatNairaFull(wallet?.defaultPoolBalance || 0)
             )}
           </div>
-        </div>
+        </div> */}
       </section>
 
       <InvestorChartsSection />
@@ -236,7 +225,7 @@ const Portfolio = () => {
               <div>
                 <h3 className="font-display text-2xl">Withdraw to bank</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Verify the destination account before initiating a payout.
+                  Funds will be sent to the bank account you provided during registration.
                 </p>
               </div>
               <button
@@ -253,94 +242,17 @@ const Portfolio = () => {
                 <input
                   type="number"
                   min={1}
-                  value={withdrawForm.amount}
-                  onChange={(e) => {
-                    setWithdrawForm((c) => ({ ...c, amount: e.target.value }));
-                  }}
-                  className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium">Bank code</span>
-                <input
-                  value={withdrawForm.bankCode}
-                  onChange={(e) => {
-                    setWithdrawForm((c) => ({ ...c, bankCode: e.target.value }));
-                    setVerifiedAccount(null);
-                  }}
-                  placeholder="e.g. 000013"
-                  className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  Enter the NIP bank code for the destination bank.
-                </span>
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium">Account number</span>
-                <input
-                  value={withdrawForm.accountNumber}
-                  onChange={(e) => {
-                    setWithdrawForm((c) => ({ ...c, accountNumber: e.target.value }));
-                    setVerifiedAccount(null);
-                  }}
-                  maxLength={10}
-                  className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium">Remark</span>
-                <input
-                  value={withdrawForm.remark}
-                  onChange={(e) => {
-                    setWithdrawForm((c) => ({ ...c, remark: e.target.value }));
-                  }}
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  placeholder="Enter amount to withdraw"
                   className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </label>
 
               <button
-                disabled={
-                  accountLookupMut.isPending ||
-                  !withdrawForm.bankCode ||
-                  withdrawForm.accountNumber.length !== 10
-                }
+                disabled={transferMut.isPending || !withdrawAmount || Number(withdrawAmount) <= 0}
                 onClick={() => {
-                  accountLookupMut.mutate(
-                    {
-                      bankCode: withdrawForm.bankCode,
-                      accountNumber: withdrawForm.accountNumber,
-                    },
-                    {
-                      onSuccess: (data) => {
-                        setVerifiedAccount(data);
-                        toast.success(`Verified ${data.accountName}`);
-                      },
-                      onError: (err) => {
-                        toast.error(err.message || "Account lookup failed.");
-                      },
-                    },
-                  );
-                }}
-                className="w-full rounded-md border border-input px-4 py-2.5 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-              >
-                {accountLookupMut.isPending ? (
-                  <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-                ) : (
-                  "Verify account"
-                )}
-              </button>
-
-              {verifiedAccount && (
-                <div className="rounded-xl border border-success/40 bg-success/10 p-3 text-sm">
-                  <div className="font-medium text-success">Account verified</div>
-                  <div className="mt-1 text-muted-foreground">{verifiedAccount.accountName}</div>
-                </div>
-              )}
-
-              <button
-                disabled={!verifiedAccount || transferMut.isPending || !withdrawForm.amount}
-                onClick={() => {
-                  const amountKobo = Math.round(Number(withdrawForm.amount) * 100);
+                  const amountKobo = Math.round(Number(withdrawAmount) * 100);
                   if (!amountKobo || amountKobo <= 0) {
                     toast.error("Enter a valid withdrawal amount.");
                     return;
@@ -348,22 +260,12 @@ const Portfolio = () => {
                   transferMut.mutate(
                     {
                       amount: String(amountKobo),
-                      bankCode: verifiedAccount.bankCode,
-                      accountNumber: verifiedAccount.accountNumber,
-                      accountName: verifiedAccount.accountName,
-                      remark: withdrawForm.remark || "Bridge payout withdrawal",
                     },
                     {
                       onSuccess: () => {
                         toast.success("Withdrawal initiated.");
                         setWithdraw(false);
-                        setWithdrawForm({
-                          amount: "",
-                          bankCode: "",
-                          accountNumber: "",
-                          remark: "Bridge payout withdrawal",
-                        });
-                        setVerifiedAccount(null);
+                        setWithdrawAmount("");
                       },
                       onError: (err) => {
                         toast.error(err.message || "Withdrawal failed.");
