@@ -6,7 +6,7 @@ import { useInvestMutation } from "@/hooks/mutations";
 import { formatNairaFull, formatNaira } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { PAGES } from "@/lib/constants";
-import { Loader2 } from "lucide-react";
+import { Loader2, Banknote, Target } from "lucide-react";
 import { toast } from "sonner";
 
 const normalizeListingResponse = (response: any) => {
@@ -89,7 +89,7 @@ const getTrustSignals = (listing: any, aiProfile: any) => {
   return [
     {
       label: "Bank data",
-      detail: business?.monoAverageMonthlyInflow ? "Mono verified inflows" : "Connection pending",
+      detail: business?.monoAverageMonthlyInflow ? "Verified inflows" : "Connection pending",
       status: business?.monoAverageMonthlyInflow ? "pass" : "warning",
     },
     {
@@ -173,11 +173,7 @@ const ListingDetailPage = () => {
 
   const aiProfile = parseAiProfile(listing.aiProfile);
   const narrative = toParagraphs(aiProfile?.narrative || aiProfile?.summary || listing.aiProfile);
-  const fallbackNarrative = [
-    listing.useOfFunds ? `Use of funds: ${listing.useOfFunds}` : null,
-    listing.expectedImpact ? `Expected impact: ${listing.expectedImpact}` : null,
-  ].filter(Boolean) as string[];
-  const story = narrative.length > 0 ? narrative : fallbackNarrative;
+  const story = narrative.length > 0 ? narrative : [];
   const flaggedNotes = toParagraphs(aiProfile?.flaggedNotes);
   const tranches = getTrancheDisplay(listing, aiProfile);
   const trustSignals = getTrustSignals(listing, aiProfile);
@@ -217,8 +213,8 @@ const ListingDetailPage = () => {
         <div className="mt-6 inline-flex items-center gap-3 rounded-2xl bg-primary px-5 py-3 text-primary-foreground">
           <span className="text-xs uppercase tracking-wider opacity-80">Bridge Rating</span>
           <span className="font-display text-2xl">{standing}</span>
-          <span className="opacity-60">·</span>
-          <span className="font-display text-2xl">{score}</span>
+          {/* <span className="opacity-60">·</span>
+          <span className="font-display text-2xl">{score}</span> */}
         </div>
 
         <div className="mt-8">
@@ -243,30 +239,67 @@ const ListingDetailPage = () => {
         </div>
       </header>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div
+        className={`mt-8 grid gap-8 ${role === "investor" ? "lg:grid-cols-[minmax(0,1fr)_360px]" : ""}`}
+      >
         <div className="min-w-0 space-y-8">
-          <section className="min-w-0 rounded-2xl border border-border bg-card p-8">
-            <h2 className="font-display text-2xl">The story</h2>
-            <div className="prose prose-sm mt-4 max-w-none wrap-anywhere text-foreground/90">
-              {story.map((p: string, i: number) => (
-                <p key={i} className="mt-4 wrap-anywhere leading-relaxed">
-                  {p}
-                </p>
-              ))}
-            </div>
-            {flaggedNotes.length > 0 && (
-              <div className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-4">
-                <div className="text-xs font-medium uppercase tracking-wider text-warning">
-                  Flagged by AI
-                </div>
-                {flaggedNotes.map((n: string, i: number) => (
-                  <p key={i} className="mt-2 wrap-anywhere text-sm">
-                    {n}
+          {story.length > 0 && (
+            <section className="min-w-0 rounded-2xl border border-border bg-card p-8">
+              <h2 className="font-display text-2xl">The story</h2>
+              <div className="prose prose-sm mt-4 max-w-none wrap-anywhere text-foreground/90">
+                {story.map((p: string, i: number) => (
+                  <p key={i} className="mt-4 wrap-anywhere leading-relaxed">
+                    {p}
                   </p>
                 ))}
               </div>
-            )}
-          </section>
+              {flaggedNotes.length > 0 && (
+                <div className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-4">
+                  <div className="text-xs font-medium uppercase tracking-wider text-warning">
+                    Flagged by AI
+                  </div>
+                  {flaggedNotes.map((n: string, i: number) => (
+                    <p key={i} className="mt-2 wrap-anywhere text-sm">
+                      {n}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {(listing.useOfFunds || listing.expectedImpact) && (
+            <section className="grid gap-4 md:grid-cols-2">
+              {listing.useOfFunds && (
+                <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6">
+                  <div className="absolute left-0 top-0 h-full w-1 bg-linear-to-b from-primary via-primary/60 to-primary/20" />
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10">
+                      <Banknote className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="font-display text-lg">Use of funds</h3>
+                  </div>
+                  <p className="mt-4 text-sm leading-relaxed text-foreground/80">
+                    {listing.useOfFunds}
+                  </p>
+                </div>
+              )}
+              {listing.expectedImpact && (
+                <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6">
+                  <div className="absolute left-0 top-0 h-full w-1 bg-linear-to-b from-success via-success/60 to-success/20" />
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-success/10">
+                      <Target className="h-5 w-5 text-success" />
+                    </div>
+                    <h3 className="font-display text-lg">Expected impact</h3>
+                  </div>
+                  <p className="mt-4 text-sm leading-relaxed text-foreground/80">
+                    {listing.expectedImpact}
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
 
           <section className="rounded-2xl border border-border bg-card p-8">
             <h2 className="font-display text-2xl">Deal terms</h2>
@@ -354,33 +387,37 @@ const ListingDetailPage = () => {
           )}
         </div>
 
-        <aside className="lg:sticky lg:top-24 self-start rounded-2xl border border-border bg-card p-6">
-          <h3 className="font-display text-xl">Invest in this deal</h3>
-          <label className="mt-4 block text-xs font-medium text-muted-foreground">Amount (₦)</label>
-          <input
-            type="number"
-            min={50000}
-            step={5000}
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value) || 0)}
-            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-lg font-medium focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          <div className="mt-1 text-xs text-muted-foreground">Minimum ₦50,000.00</div>
+        {role === "investor" && (
+          <aside className="lg:sticky lg:top-24 self-start rounded-2xl border border-border bg-card p-6">
+            <h3 className="font-display text-xl">Invest in this deal</h3>
+            <label className="mt-4 block text-xs font-medium text-muted-foreground">
+              Amount (₦)
+            </label>
+            <input
+              type="number"
+              min={50000}
+              step={5000}
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value) || 0)}
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-lg font-medium focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <div className="mt-1 text-xs text-muted-foreground">Minimum ₦50,000.00</div>
 
-          <div className="mt-6 space-y-3 rounded-xl bg-secondary/60 p-4 text-sm">
-            <Row label="Expected return" value={formatNairaFull(projected.expected * 100)} />
-            <Row label="Total receivable" value={formatNairaFull(projected.total * 100)} />
-            <Row label="Projected timeline" value={`${projected.months} months`} />
-          </div>
+            <div className="mt-6 space-y-3 rounded-xl bg-secondary/60 p-4 text-sm">
+              <Row label="Expected return" value={formatNairaFull(projected.expected * 100)} />
+              <Row label="Total receivable" value={formatNairaFull(projected.total * 100)} />
+              <Row label="Projected timeline" value={`${projected.months} months`} />
+            </div>
 
-          <button
-            onClick={handleInvest}
-            disabled={amount < 50000}
-            className="mt-6 w-full rounded-md bg-primary px-4 py-3 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          >
-            {role === "investor" ? "Commit capital" : "Sign up to invest"}
-          </button>
-        </aside>
+            <button
+              onClick={handleInvest}
+              disabled={amount < 50000}
+              className="mt-6 w-full rounded-md bg-primary px-4 py-3 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              Commit capital
+            </button>
+          </aside>
+        )}
       </div>
 
       {showConfirm && (
