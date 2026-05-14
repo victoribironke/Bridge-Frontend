@@ -1,16 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useInvestorWallet,
   useInvestorDeals,
   useInvestorSummary,
   usePaymentLink,
   useInvestorPerformanceChart,
+  type InvestorReturnsPeriod,
 } from "@/hooks/queries";
 import { useProtectedRoute } from "@/hooks/use-protected-route";
 import { useDepositMutation, usePayoutTransferMutation } from "@/hooks/mutations";
-import { formatNaira, formatNairaFull } from "@/lib/utils";
+import { formatNaira, formatNairaFull, formatChartAxisLabel } from "@/lib/utils";
 import { Loader2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 
@@ -499,7 +500,7 @@ const ActiveCard = ({ d }: { d: any }) => {
         <div>
           <h3 className="font-display text-xl">{businessName}</h3>
           <div className="mt-1 text-sm text-muted-foreground">
-            Standing · {standing} · target {d.listings?.targetRepaymentMonths} months
+            Standing · {standing} · target {d.listings?.targetMonths} months
           </div>
         </div>
         <div className="text-right">
@@ -585,9 +586,16 @@ const Mini = ({ label, value }: { label: string; value: string }) => {
 
 const InvestorChartsSection = () => {
   const now = new Date();
-  const [period, setPeriod] = useState<"daily" | "monthly" | "yearly">("monthly");
+  const [period, setPeriod] = useState<InvestorReturnsPeriod>("hourly");
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
+  const [day, setDay] = useState(now.getDate());
+
+  const daysInSelectedMonth = new Date(year, month, 0).getDate();
+
+  useEffect(() => {
+    setDay((d) => Math.min(d, new Date(year, month, 0).getDate()));
+  }, [year, month]);
 
   const {
     data: chartResponse,
@@ -597,20 +605,14 @@ const InvestorChartsSection = () => {
   } = useInvestorPerformanceChart(
     period,
     period === "yearly" ? undefined : year,
-    period === "daily" ? month : undefined,
+    period === "daily" || period === "hourly" ? month : undefined,
+    period === "hourly" ? day : undefined,
   );
 
   const rawData = chartResponse?.data ?? [];
   const hasData = rawData.length > 0;
 
   const yearOptions = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
-
-  const shortAxisLabel = (label: string) => {
-    const parts = label.split("-");
-    if (parts.length >= 3) return `${parts[1]}/${parts[2]}`;
-    if (parts.length === 2) return parts[1];
-    return label;
-  };
 
   const maxPeriodReturns = Math.max(...rawData.map((d) => d.totalReturnsReceived), 1);
   const maxCumulative = Math.max(...rawData.map((d) => d.cumulativeReturns), 1);
@@ -631,7 +633,7 @@ const InvestorChartsSection = () => {
       const val = d[key] || 0;
       const x = 30 + (idx / Math.max(1, len - 1)) * 340;
       const y = 130 - (val / maxVal) * 100;
-      return { x, y, val, label: shortAxisLabel(d.label) };
+      return { x, y, val, label: formatChartAxisLabel(d.label, period) };
     });
   };
 
@@ -674,9 +676,10 @@ const InvestorChartsSection = () => {
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={period}
-            onChange={(e) => setPeriod(e.target.value as "daily" | "monthly" | "yearly")}
+            onChange={(e) => setPeriod(e.target.value as InvestorReturnsPeriod)}
             className="rounded-xl border border-border bg-secondary/50 px-3 py-1.5 text-xs text-foreground focus:outline-none"
           >
+            <option value="hourly">Hourly</option>
             <option value="daily">Daily</option>
             <option value="monthly">Monthly</option>
             <option value="yearly">Yearly</option>
@@ -694,7 +697,7 @@ const InvestorChartsSection = () => {
               ))}
             </select>
           )}
-          {period === "daily" && (
+          {(period === "daily" || period === "hourly") && (
             <select
               value={month}
               onChange={(e) => setMonth(Number(e.target.value))}
@@ -703,6 +706,20 @@ const InvestorChartsSection = () => {
               {monthNames.map((name, i) => (
                 <option key={name} value={i + 1}>
                   {name}
+                </option>
+              ))}
+            </select>
+          )}
+          {period === "hourly" && (
+            <select
+              value={day}
+              onChange={(e) => setDay(Number(e.target.value))}
+              aria-label="Day of month"
+              className="rounded-xl border border-border bg-secondary/50 px-3 py-1.5 text-xs text-foreground focus:outline-none"
+            >
+              {Array.from({ length: daysInSelectedMonth }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={d}>
+                  {d}
                 </option>
               ))}
             </select>
