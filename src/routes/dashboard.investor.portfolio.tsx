@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useInvestorWallet,
   useInvestorDeals,
@@ -18,6 +19,7 @@ import {
   useCancelInvestmentMutation,
 } from "@/hooks/mutations";
 import { formatNaira, formatNairaFull, formatChartAxisLabel } from "@/lib/utils";
+import { getEmailFromBridgeAuthToken, openInvestorSquadWalletCheckout } from "@/lib/squad-widget";
 import { PAGES } from "@/lib/constants";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -63,6 +65,7 @@ const dealBusinessName = (d: any, listing?: any) => {
 
 const Portfolio = () => {
   useProtectedRoute("investor");
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<"inactive" | "active" | "completed" | "defaulted">("inactive");
   const [withdraw, setWithdraw] = useState(false);
   const [fundModal, setFundModal] = useState(false);
@@ -342,8 +345,9 @@ const Portfolio = () => {
             {fundTab === "checkout" && (
               <div className="mt-6 space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Enter how much you want to add. You will be redirected to Squad to pay with card,
-                  USSD, or bank transfer. Your wallet is credited after the payment clears.
+                  Enter how much you want to add. The Squad payment window will open so you can pay
+                  with card, USSD, or bank transfer. Your wallet is credited after the payment
+                  clears.
                 </p>
                 <label className="block">
                   <span className="text-sm font-medium">Amount (₦)</span>
@@ -367,16 +371,27 @@ const Portfolio = () => {
                       return;
                     }
                     walletCheckoutMut.mutate(amountKobo, {
-                      onSuccess: (data) => {
-                        const url =
-                          (typeof data?.checkout_url === "string" && data.checkout_url) ||
-                          (typeof data?.checkoutUrl === "string" && data.checkoutUrl) ||
-                          "";
-                        if (!url) {
-                          toast.error("Checkout could not be started. Try again.");
-                          return;
+                      onSuccess: async (data) => {
+                        const email = getEmailFromBridgeAuthToken();
+                        try {
+                          await openInvestorSquadWalletCheckout({
+                            amountKobo,
+                            session: data,
+                            emailFallback: email,
+                            onClose: () => {},
+                            onSuccess: () => {
+                              toast.success("Payment completed. Your wallet will update shortly.");
+                              void queryClient.invalidateQueries({ queryKey: ["investor-wallet"] });
+                              void queryClient.invalidateQueries({
+                                queryKey: ["investor-summary"],
+                              });
+                            },
+                          });
+                        } catch (e) {
+                          toast.error(
+                            e instanceof Error ? e.message : "Could not open Squad checkout.",
+                          );
                         }
-                        window.location.assign(url);
                       },
                       onError: (err) => {
                         toast.error(err instanceof Error ? err.message : "Checkout failed.");
