@@ -587,6 +587,36 @@ Returns the investor's Squad virtual account number and a payment link for fundi
 
 \---
 
+### POST /investor/:userId/checkout
+
+**Auth:** JWT (investor)  
+**Path params:** `userId` — investor user UUID
+
+Initiates a Squad checkout flow for wallet top-up. Returns a `checkout\_url` to which you should redirect the investor's browser. Once the payment is complete, Squad will notify Bridge via webhook to credit the investor's wallet.
+
+**Request body:**
+
+| Field    | Type   | Required | Notes                                    |
+| -------- | ------ | -------- | ---------------------------------------- |
+| `amount` | number | yes      | Deposit amount in kobo (e.g. 5000 = ₦50) |
+
+**Response 201:**
+
+| Field              | Type   | Notes                                        |
+| ------------------ | ------ | -------------------------------------------- |
+| `checkout\_url`    | string | URL to redirect the user to                  |
+| `transaction\_ref` | string | Internal reference for this checkout session |
+
+**Errors:**
+
+| Status | Meaning                           |
+| ------ | --------------------------------- |
+| 400    | Validation error                  |
+| 401    | Missing or invalid token          |
+| 403    | Caller is not an investor account |
+
+\---
+
 ### GET /investor/:userId/wallet
 
 **Auth:** JWT  
@@ -912,6 +942,36 @@ Simulates real-world revenue by automatically depositing 5% of the business's av
 
 \---
 
+### POST /business/:userId/checkout
+
+**Auth:** JWT (business)  
+**Path params:** `userId` — business user UUID
+
+Initiates a Squad checkout flow for business revenue or wallet top-up. Returns a `checkout\_url` for redirection.
+
+**Request body:**
+
+| Field    | Type   | Required | Notes          |
+| -------- | ------ | -------- | -------------- |
+| `amount` | number | yes      | Amount in kobo |
+
+**Response 201:**
+
+| Field              | Type   | Notes                       |
+| ------------------ | ------ | --------------------------- |
+| `checkout\_url`    | string | URL to redirect the user to |
+| `transaction\_ref` | string | Internal reference          |
+
+**Errors:**
+
+| Status | Meaning                          |
+| ------ | -------------------------------- |
+| 400    | Validation error                 |
+| 401    | Missing or invalid token         |
+| 403    | Caller is not a business account |
+
+\---
+
 ### GET /business/:userId/payment-link
 
 **Auth:** JWT  
@@ -947,6 +1007,7 @@ Simulates real-world revenue by automatically depositing 5% of the business's av
 | `totalSwept`          | number | Total swept to investors so far, in kobo  |
 | `totalRemaining`      | number | `totalReturnAmount - totalSwept`, in kobo |
 | `currentSweepPercent` | string | e.g. `"8.50"`                             |
+| `serviceFee`          | number | 1% Platform service fee in kobo           |
 
 \---
 
@@ -1002,10 +1063,11 @@ Pays off the entire remaining balance in one transfer. Any locked tranches are r
 
 **Response 201:**
 
-| Field     | Type   | Notes                                                   |
-| --------- | ------ | ------------------------------------------------------- |
-| `repaid`  | number | Amount repaid in kobo                                   |
-| `message` | string | e.g. `"₦32,250 repaid. Your listing is now completed."` |
+| Field        | Type   | Notes                                                   |
+| ------------ | ------ | ------------------------------------------------------- |
+| `repaid`     | number | Amount repaid in kobo                                   |
+| `serviceFee` | number | 1% Platform service fee deducted in kobo                |
+| `message`    | string | e.g. `"₦32,250 repaid. Your listing is now completed."` |
 
 **Errors:**
 
@@ -1337,6 +1399,7 @@ All fields optional. Send only the fields to update.
 | `totalReturnDue`          | number                  | Total return owed to this investor, in kobo                      |
 | `totalReturnReceived`     | number                  | Return received so far, in kobo                                  |
 | `targetRepaymentMonths`   | number                  | Target months to full repayment                                  |
+| `businessName`            | string                  | Name of the business the investor funded                         |
 | `status`                  | `investmentStatus` enum | `"inactive"` (pre-funding) \| `"active"` (repayment in progress) |
 | `squadTransferReference`  | string \| null          |                                                                  |
 | `createdAt`               | ISO datetime            |                                                                  |
@@ -1353,6 +1416,7 @@ All fields optional. Send only the fields to update.
 | `incomingPaymentAmount` | number       | Full payment received, in kobo                                                                     |
 | `sweepPercent`          | string       | e.g. `"8.50"`                                                                                      |
 | `sweepAmount`           | number       | Amount swept to investors, in kobo                                                                 |
+| `serviceFee`            | number       | 1% Platform service fee in kobo                                                                    |
 | `netAmountRetained`     | number       | Amount retained by the business after the 1% platform fee and investor sweep are deducted, in kobo |
 | `squadWebhookReference` | string       |                                                                                                    |
 | `processedAt`           | ISO datetime |                                                                                                    |
