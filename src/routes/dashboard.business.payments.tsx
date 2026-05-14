@@ -5,9 +5,14 @@ import {
   useBusinessPaymentLink,
   useBusinessSweepSummary,
   useBusinessPayments,
+  useBusinessBalance,
   usePayouts,
 } from "@/hooks/queries";
-import { usePayoutAccountLookupMutation, usePayoutTransferMutation } from "@/hooks/mutations";
+import {
+  usePayoutAccountLookupMutation,
+  usePayoutTransferMutation,
+  useSimulateRevenueMutation,
+} from "@/hooks/mutations";
 import { useProtectedRoute } from "@/hooks/use-protected-route";
 import { useAuth } from "@/lib/auth";
 import { formatNaira, formatNairaFull } from "@/lib/utils";
@@ -20,9 +25,11 @@ const Payments = () => {
   const { data: linkData, isLoading: isLinkLoading } = useBusinessPaymentLink();
   const { data: sweepSummary, isLoading: isSweepLoading } = useBusinessSweepSummary();
   const { data: paymentsData, isLoading: isPaymentsLoading } = useBusinessPayments();
+  const { data: balanceData, isLoading: isBalanceLoading } = useBusinessBalance();
   const { data: payoutsData, isLoading: isPayoutsLoading } = usePayouts();
   const accountLookupMut = usePayoutAccountLookupMutation();
   const transferMut = usePayoutTransferMutation();
+  const simulateRevenueMut = useSimulateRevenueMutation();
 
   const link = linkData?.paymentLink;
   const qr = link
@@ -135,12 +142,34 @@ const Payments = () => {
       <div className="mx-auto max-w-5xl px-6 py-10">
         <div className="flex items-center justify-between gap-4">
           <h1 className="font-display text-3xl">Payments</h1>
-          <button
-            onClick={() => setWithdrawOpen(true)}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Withdraw
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() =>
+                simulateRevenueMut.mutate(undefined, {
+                  onSuccess: (data) => {
+                    toast.success(
+                      data.message ||
+                        `Simulation started (${data.deposits} deposits every ${data.intervalSeconds}s).`,
+                    );
+                  },
+                  onError: (err) => {
+                    toast.error(err.message || "Could not start inflow simulation.");
+                  },
+                })
+              }
+              disabled={simulateRevenueMut.isPending}
+              className="text-xs text-muted-foreground/60 underline decoration-muted-foreground/25 underline-offset-2 hover:text-muted-foreground disabled:opacity-40"
+            >
+              {simulateRevenueMut.isPending ? "…" : "Inflow"}
+            </button>
+            <button
+              onClick={() => setWithdrawOpen(true)}
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Withdraw
+            </button>
+          </div>
         </div>
 
         <section className="mt-6 grid gap-6 md:grid-cols-[260px_1fr]">
@@ -208,9 +237,9 @@ const Payments = () => {
           </div>
         </section>
 
-        <section className="mt-8 grid grid-cols-3 gap-4">
-          {isSweepLoading ? (
-            <div className="col-span-3 flex justify-center py-6">
+        <section className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+          {isSweepLoading || isBalanceLoading ? (
+            <div className="col-span-full flex justify-center py-6">
               <Loader2 className="animate-spin text-primary" />
             </div>
           ) : (
@@ -218,6 +247,7 @@ const Payments = () => {
               <Stat label="Swept to date" value={formatNaira(totalSwept)} />
               <Stat label="Remaining to sweep" value={formatNaira(totalRemaining)} />
               <Stat label="Current sweep" value={`${currentSweepPercent}%`} />
+              <Stat label="Ledger balance" value={formatNairaFull(balanceData?.balance ?? 0)} />
             </>
           )}
         </section>
