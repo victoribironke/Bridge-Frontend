@@ -103,7 +103,30 @@ const SiteChrome = () => {
         <Outlet />
       </main>
       <Footer />
-      <Toaster richColors closeButton position="top-center" />
+      <Toaster
+        position="top-center"
+        closeButton
+        richColors={false}
+        toastOptions={{
+          classNames: {
+            toast:
+              "group flex w-[min(100vw-2rem,24rem)] items-start gap-3 rounded-xl border border-border bg-card p-4 pr-10 text-card-foreground shadow-lg [font-family:var(--font-sans)]",
+            title: "text-sm font-semibold leading-snug text-foreground",
+            description: "text-sm leading-snug text-muted-foreground",
+            actionButton:
+              "rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90",
+            cancelButton:
+              "rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary",
+            closeButton:
+              "border-border bg-secondary/80 text-muted-foreground hover:bg-secondary hover:text-foreground",
+            success: "border-l-4 border-l-[var(--success)]",
+            error: "border-l-4 border-l-[var(--destructive)]",
+            warning: "border-l-4 border-l-[var(--warning)]",
+            info: "border-l-4 border-l-[var(--primary)]",
+            loading: "border-l-4 border-l-[var(--muted-foreground)]",
+          },
+        }}
+      />
     </div>
   );
 };
