@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   useInvestorWallet,
@@ -7,17 +7,23 @@ import {
   useInvestorSummary,
   usePaymentLink,
   useInvestorPerformanceChart,
+  useListingFunding,
   type InvestorReturnsPeriod,
 } from "@/hooks/queries";
 import { useProtectedRoute } from "@/hooks/use-protected-route";
-import { useDepositMutation, usePayoutTransferMutation } from "@/hooks/mutations";
+import {
+  useDepositMutation,
+  usePayoutTransferMutation,
+  useCancelInvestmentMutation,
+} from "@/hooks/mutations";
 import { formatNaira, formatNairaFull, formatChartAxisLabel } from "@/lib/utils";
+import { PAGES } from "@/lib/constants";
 import { Loader2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 
 const Portfolio = () => {
   useProtectedRoute("investor");
-  const [tab, setTab] = useState<"active" | "completed" | "defaulted">("active");
+  const [tab, setTab] = useState<"inactive" | "active" | "completed" | "defaulted">("inactive");
   const [withdraw, setWithdraw] = useState(false);
   const [fundModal, setFundModal] = useState(false);
   const [fundTab, setFundTab] = useState<"bank" | "sandbox">("bank");
@@ -39,6 +45,7 @@ const Portfolio = () => {
   const transferMut = usePayoutTransferMutation();
 
   const deals = dealsData || [];
+  const inactiveDeals = deals.filter((d: any) => d.status === "inactive");
   const activeDeals = deals.filter((d: any) => d.status === "active");
   const completedDeals = deals.filter((d: any) => d.status === "completed");
   const defaultedDeals = deals.filter((d: any) => d.status === "defaulted");
@@ -54,7 +61,7 @@ const Portfolio = () => {
     <div className="mx-auto max-w-6xl px-6 py-10">
       <h1 className="font-display text-3xl">Your portfolio</h1>
 
-      <section className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-5">
+      <section className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
         {isSummaryLoading ? (
           <div className="col-span-full flex justify-center py-4">
             <Loader2 className="animate-spin text-primary" />
@@ -67,6 +74,7 @@ const Portfolio = () => {
               value={formatNaira(summary?.totalReturnsReceivedKobo || 0)}
             />
             <Stat label="Completed" value={String(completedDeals.length)} />
+            <Stat label="Funding" value={String(inactiveDeals.length)} />
             <Stat label="Active" value={String(activeDeals.length)} />
             <Stat label="Overall ROI" value={`${overallRoi.toFixed(1)}%`} />
           </>
@@ -122,6 +130,7 @@ const Portfolio = () => {
         <div className="inline-flex rounded-full border border-border bg-card p-0.5 text-sm">
           {(
             [
+              ["inactive", "Inactive"],
               ["active", "Active"],
               ["completed", "Completed"],
               ["defaulted", "Defaulted"],
@@ -146,6 +155,15 @@ const Portfolio = () => {
           </div>
         ) : (
           <div className="mt-6 space-y-4">
+            {tab === "inactive" &&
+              (inactiveDeals.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+                  No commitments awaiting funding. Browse listings to invest.
+                </div>
+              ) : (
+                inactiveDeals.map((d: any) => <InactiveDealCard key={d.id} d={d} />)
+              ))}
+
             {tab === "active" &&
               (activeDeals.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
@@ -479,6 +497,146 @@ const Portfolio = () => {
   );
 };
 
+const parseAiProfileLocal = (aiProfile: any) => {
+  if (!aiProfile) return null;
+  if (typeof aiProfile === "object") return aiProfile;
+  if (typeof aiProfile === "string") {
+    try {
+      return JSON.parse(aiProfile);
+    } catch {
+      return { narrative: aiProfile };
+    }
+  }
+  return null;
+};
+
+const InactiveDealCard = ({ d }: { d: any }) => {
+  const listing = d.listings ?? {};
+  const listingId = (d.listingId ?? listing.id) as string | undefined;
+  const cancelMut = useCancelInvestmentMutation();
+  const { data: funding, isLoading: isFundingLoading } = useListingFunding(
+    listingId,
+    d.status === "inactive",
+  );
+
+  const capital = funding?.capitalRequested ?? listing.capitalRequested ?? 0;
+  const committed = funding?.totalCommitted ?? listing.totalCommitted ?? 0;
+  const investors = funding?.investorCount ?? listing.investorCount ?? 0;
+  const fundedPct = capital > 0 ? Math.min(100, Math.round((committed / capital) * 100)) : 0;
+
+  const businessName = listing.business_profiles?.businessName || "Business";
+  const sector = listing.sector || "—";
+  const tier = listing.business_profiles?.tier ?? listing.tier ?? 1;
+  const standing =
+    listing.bridge_ratings?.standing || listing.bridge_ratings?.overallStanding || "Seed";
+  const ai = parseAiProfileLocal(listing.aiProfile);
+  const narrative = Array.isArray(ai?.narrative)
+    ? ai.narrative[0]
+    : typeof ai?.narrative === "string"
+      ? ai.narrative
+      : null;
+  const blurb = narrative || listing.useOfFunds || "You have a commitment on this listing.";
+  const targetMonths =
+    d.targetRepaymentMonths ?? listing.targetRepaymentMonths ?? listing.targetMonths ?? 0;
+
+  const handleCancel = () => {
+    if (!window.confirm("Cancel this commitment? Your capital will be refunded to your wallet.")) {
+      return;
+    }
+    cancelMut.mutate(d.id, {
+      onSuccess: (data) => {
+        toast.success(data.message || "Investment cancelled.");
+      },
+      onError: (err: any) => {
+        toast.error(err.message || "Could not cancel.");
+      },
+    });
+  };
+
+  return (
+    <div className="rounded-3xl border border-dashed border-primary/40 bg-card p-8 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="rounded-full border border-border px-2 py-0.5 text-muted-foreground">
+              {sector}
+            </span>
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">Tier {tier}</span>
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
+              Awaiting full funding
+            </span>
+          </div>
+          <h3 className="mt-3 font-display text-2xl md:text-3xl">{businessName}</h3>
+          <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{blurb}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Target horizon · {targetMonths} months ·{" "}
+            <span className="font-medium text-foreground">{investors}</span> investor
+            {investors === 1 ? "" : "s"} on this listing
+            {isFundingLoading ? " · refreshing totals…" : ""}
+          </p>
+        </div>
+        {listingId && (
+          <Link
+            to={PAGES.LISTINGS_ID}
+            params={{ id: listingId }}
+            className="shrink-0 rounded-xl border border-input bg-background px-4 py-2 text-xs font-medium text-primary hover:bg-secondary transition-colors"
+          >
+            View listing →
+          </Link>
+        )}
+      </div>
+
+      <div className="mt-6 inline-flex items-center gap-3 rounded-2xl bg-primary px-5 py-3 text-primary-foreground">
+        <span className="text-xs uppercase tracking-wider opacity-80">Bridge rating</span>
+        <span className="font-display text-2xl">{standing}</span>
+      </div>
+
+      <div className="mt-8">
+        <div className="flex items-end justify-between gap-4 text-sm">
+          <div>
+            <div className="font-display text-3xl">{formatNaira(committed)}</div>
+            <div className="text-muted-foreground">committed of {formatNaira(capital)}</div>
+          </div>
+          <div className="text-right">
+            <div className="font-medium">
+              {investors} investor{investors === 1 ? "" : "s"}
+            </div>
+            <div className="text-muted-foreground">
+              {formatNaira(Math.max(0, capital - committed))} remaining
+            </div>
+          </div>
+        </div>
+        <div className="mt-3 h-2 w-full rounded-full bg-secondary">
+          <div className="h-2 rounded-full bg-primary" style={{ width: `${fundedPct}%` }} />
+        </div>
+      </div>
+
+      <div className="mt-6 flex flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">
+            Your commitment
+          </div>
+          <div className="mt-1 font-display text-xl">{formatNairaFull(d.amountCommitted)}</div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={cancelMut.isPending}
+            onClick={handleCancel}
+            className="rounded-md border border-destructive/50 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
+          >
+            {cancelMut.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin inline" />
+            ) : (
+              "Cancel commitment"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ActiveCard = ({ d }: { d: any }) => {
   const [open, setOpen] = useState(false);
 
@@ -500,7 +658,8 @@ const ActiveCard = ({ d }: { d: any }) => {
         <div>
           <h3 className="font-display text-xl">{businessName}</h3>
           <div className="mt-1 text-sm text-muted-foreground">
-            Standing · {standing} · target {d.listings?.targetMonths} months
+            Standing · {standing} · target{" "}
+            {d.listings?.targetRepaymentMonths ?? d.targetRepaymentMonths ?? 0} months
           </div>
         </div>
         <div className="text-right">
