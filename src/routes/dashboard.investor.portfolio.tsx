@@ -5,7 +5,6 @@ import {
   useInvestorWallet,
   useInvestorDeals,
   useInvestorSummary,
-  usePaymentLink,
   useInvestorPerformanceChart,
   useListingFunding,
   useListingDetail,
@@ -14,12 +13,13 @@ import {
 import { useProtectedRoute } from "@/hooks/use-protected-route";
 import {
   useDepositMutation,
+  useInvestorWalletCheckoutMutation,
   usePayoutTransferMutation,
   useCancelInvestmentMutation,
 } from "@/hooks/mutations";
 import { formatNaira, formatNairaFull, formatChartAxisLabel } from "@/lib/utils";
 import { PAGES } from "@/lib/constants";
-import { Loader2, Copy, Check } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 /**
@@ -66,22 +66,16 @@ const Portfolio = () => {
   const [tab, setTab] = useState<"inactive" | "active" | "completed" | "defaulted">("inactive");
   const [withdraw, setWithdraw] = useState(false);
   const [fundModal, setFundModal] = useState(false);
-  const [fundTab, setFundTab] = useState<"bank" | "sandbox">("bank");
-  const [linkGenerated, setLinkGenerated] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [fundTab, setFundTab] = useState<"checkout" | "sandbox">("checkout");
+  const [fundAmount, setFundAmount] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
 
   const { data: summary, isLoading: isSummaryLoading } = useInvestorSummary();
   const { data: wallet, isLoading: isWalletLoading } = useInvestorWallet();
   const { data: dealsData, isLoading: isDealsLoading } = useInvestorDeals();
-  const {
-    data: paymentData,
-    isLoading: isPaymentLoading,
-    refetch: refetchPaymentLink,
-  } = usePaymentLink();
   const depositMut = useDepositMutation();
+  const walletCheckoutMut = useInvestorWalletCheckoutMutation();
   const transferMut = usePayoutTransferMutation();
 
   const deals = dealsData || [];
@@ -320,17 +314,19 @@ const Portfolio = () => {
 
             <div className="mt-4 inline-flex rounded-full border border-border bg-secondary/40 p-0.5 text-sm">
               <button
-                onClick={() => setFundTab("bank")}
+                type="button"
+                onClick={() => setFundTab("checkout")}
                 className={
                   "rounded-full px-4 py-1.5 " +
-                  (fundTab === "bank"
+                  (fundTab === "checkout"
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground")
                 }
               >
-                Bank Transfer
+                Squad checkout
               </button>
               <button
+                type="button"
                 onClick={() => setFundTab("sandbox")}
                 className={
                   "rounded-full px-4 py-1.5 " +
@@ -339,103 +335,63 @@ const Portfolio = () => {
                     : "text-muted-foreground")
                 }
               >
-                Simulate Deposit
+                Simulate deposit
               </button>
             </div>
 
-            {fundTab === "bank" && (
-              <>
-                {isPaymentLoading ? (
-                  <div className="flex justify-center py-10">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                ) : paymentData ? (
-                  <div className="mt-6 space-y-4 text-left">
-                    <div className="rounded-2xl border border-border bg-secondary/30 p-4 text-center">
-                      <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Dedicated Virtual Account
-                      </div>
-                      <div className="mt-2 font-display text-3xl tracking-wider text-primary">
-                        {paymentData.virtualAccountNumber || "N/A"}
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground">Bank: Squad / GTBank</div>
-                    </div>
-
-                    {!linkGenerated ? (
-                      <button
-                        onClick={async () => {
-                          setIsGenerating(true);
-                          await refetchPaymentLink();
-                          setIsGenerating(false);
-                          setLinkGenerated(true);
-                        }}
-                        disabled={isGenerating}
-                        className="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-xl border border-primary px-4 py-3 text-xs font-medium text-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
-                      >
-                        {isGenerating ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Generating link...
-                          </>
-                        ) : (
-                          "Generate payment link"
-                        )}
-                      </button>
-                    ) : paymentData.paymentLink ? (
-                      <div className="rounded-2xl border border-border bg-card p-4 space-y-3 animate-in fade-in zoom-in-95 duration-200">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Instant Checkout Link
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Use this unique link to fund via Debit Card, USSD, or Bank Transfers
-                          instantly.
-                        </p>
-
-                        <div className="flex items-center gap-2 bg-secondary/50 border border-border rounded-xl p-2.5">
-                          <input
-                            type="text"
-                            readOnly
-                            value={paymentData.paymentLink}
-                            className="bg-transparent text-xs text-foreground w-full focus:outline-none truncate"
-                          />
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(paymentData.paymentLink);
-                              setCopied(true);
-                              setTimeout(() => setCopied(false), 2000);
-                            }}
-                            className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                            title="Copy link"
-                          >
-                            {copied ? (
-                              <Check className="h-3.5 w-3.5 text-success" />
-                            ) : (
-                              <Copy className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        </div>
-
-                        <a
-                          href={paymentData.paymentLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-                        >
-                          Launch Squad Checkout →
-                        </a>
-                      </div>
-                    ) : (
-                      <div className="text-center text-xs text-muted-foreground py-2">
-                        Payment link generation unavailable.
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="mt-6 rounded-xl border border-destructive/20 bg-destructive/5 py-4 text-center text-sm text-destructive">
-                    Failed to load dedicated payment details.
-                  </div>
-                )}
-              </>
+            {fundTab === "checkout" && (
+              <div className="mt-6 space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Enter how much you want to add. You will be redirected to Squad to pay with card,
+                  USSD, or bank transfer. Your wallet is credited after the payment clears.
+                </p>
+                <label className="block">
+                  <span className="text-sm font-medium">Amount (₦)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    step="0.01"
+                    value={fundAmount}
+                    onChange={(e) => setFundAmount(e.target.value)}
+                    placeholder="e.g. 5000"
+                    className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </label>
+                <button
+                  type="button"
+                  disabled={walletCheckoutMut.isPending || !fundAmount || Number(fundAmount) <= 0}
+                  onClick={() => {
+                    const amountKobo = Math.round(Number(fundAmount) * 100);
+                    if (!amountKobo || amountKobo <= 0) {
+                      toast.error("Enter a valid amount.");
+                      return;
+                    }
+                    walletCheckoutMut.mutate(amountKobo, {
+                      onSuccess: (data) => {
+                        const url =
+                          (typeof data?.checkout_url === "string" && data.checkout_url) ||
+                          (typeof data?.checkoutUrl === "string" && data.checkoutUrl) ||
+                          "";
+                        if (!url) {
+                          toast.error("Checkout could not be started. Try again.");
+                          return;
+                        }
+                        window.location.assign(url);
+                      },
+                      onError: (err) => {
+                        toast.error(err instanceof Error ? err.message : "Checkout failed.");
+                      },
+                    });
+                  }}
+                  className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {walletCheckoutMut.isPending ? (
+                    <Loader2 className="mx-auto h-4 w-4 animate-spin" />
+                  ) : (
+                    "Continue to secure checkout"
+                  )}
+                </button>
+              </div>
             )}
 
             {fundTab === "sandbox" && (
@@ -488,11 +444,13 @@ const Portfolio = () => {
             )}
 
             <button
+              type="button"
               onClick={() => {
                 setFundModal(false);
                 setTimeout(() => {
-                  setLinkGenerated(false);
-                  setFundTab("bank");
+                  setFundTab("checkout");
+                  setFundAmount("");
+                  setDepositAmount("");
                 }, 300);
               }}
               className="mt-8 w-full rounded-xl bg-secondary px-4 py-2.5 text-sm font-medium text-foreground hover:bg-secondary/80 transition-colors"
