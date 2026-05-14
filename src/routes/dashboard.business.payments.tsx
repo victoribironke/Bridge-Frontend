@@ -324,7 +324,7 @@ const Payments = () => {
                       <tr key={p.id}>
                         <td className="py-3">{formatActivityTimestamp(processedAt)}</td>
                         <td>{incoming != null ? formatNairaFull(incoming) : "—"}</td>
-                        <td>{p.serviceFee != null ? p.serviceFee : 0}</td>
+                        <td>{p.serviceFee != null ? formatNairaFull(p.serviceFee) : 0}</td>
                         <td>{sweepApplied ? formatNairaFull(sweep) : "—"}</td>
                         <td className="font-medium">{formatNairaFull(net)}</td>
                         <td>
