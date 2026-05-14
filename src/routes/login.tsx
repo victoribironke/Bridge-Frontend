@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Field, FormShell, GhostBtn, Input, PrimaryBtn } from "@/components/form-bits";
 import { PAGES } from "@/lib/constants";
+import { ApiError } from "@/lib/api-client";
 import { useLoginMutation } from "@/hooks/mutations";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,7 +28,14 @@ const Login = () => {
           }
         },
         onError: (err) => {
-          toast.error(err.message || "Invalid email or password.");
+          if (err instanceof ApiError && err.statusCode === 401) {
+            const msg = err.message?.trim();
+            toast.error(
+              msg && msg.length > 0 && msg !== "Unauthorized" ? msg : "Invalid email or password.",
+            );
+            return;
+          }
+          toast.error(err instanceof Error ? err.message : "Invalid email or password.");
         },
       },
     );
