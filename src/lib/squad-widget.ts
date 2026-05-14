@@ -1,17 +1,19 @@
 /**
- * Squad payment modal (https://checkout.js.squadco.com/widget/squad.min.js).
+ * Squad payment modal (https://checkout.squadco.com/widget/squad.min.js).
  * Opens on the same page — no full-page redirect.
- * Pattern mirrors Mono Connect script loading in register.business.tsx.
  *
- * Set `VITE_SQUAD_CHECKOUT_TOKEN` in `.env` or `.env.local` (see `.env.example`).
+ * The widget expects your Squad **public** key as `key` (`test_pk_…`). Secret keys (`sandbox_sk_…`)
+ * or passing `token` instead of `key` cause Squad to error (e.g. "PUBLIC_KEY is required").
+ *
+ * Set `VITE_SQUAD_PUBLIC_KEY` in `.env` (see `.env.example`). `VITE_SQUAD_CHECKOUT_TOKEN` is a fallback name only.
  */
 
-const getSquadInvestorCheckoutToken = (): string => {
-  const raw = import.meta.env.VITE_SQUAD_CHECKOUT_TOKEN;
+const getSquadPaymentModalKey = (): string => {
+  const raw = import.meta.env.VITE_SQUAD_PUBLIC_KEY || import.meta.env.VITE_SQUAD_CHECKOUT_TOKEN;
   const t = typeof raw === "string" ? raw.trim() : "";
   if (t) return t;
   throw new Error(
-    "Missing VITE_SQUAD_CHECKOUT_TOKEN. Add it to .env or .env.local and restart the dev server.",
+    "Missing Squad public key. Set VITE_SQUAD_PUBLIC_KEY in .env (test_pk_… from Squad sandbox) and restart the dev server.",
   );
 };
 
@@ -134,7 +136,7 @@ export type OpenInvestorSquadCheckoutParams = {
 
 /**
  * Opens the Squad checkout popup on this page (no redirect).
- * Uses the fixed sandbox token; `session` must supply `transaction_ref` from Bridge.
+ * `session` must supply `transaction_ref` from Bridge; merchant key comes from env (`key` param).
  */
 export const openInvestorSquadWalletCheckout = async (
   params: OpenInvestorSquadCheckoutParams,
@@ -160,7 +162,7 @@ export const openInvestorSquadWalletCheckout = async (
   const callbackUrl = buildSquadCheckoutCallbackUrl();
 
   const instance = new SquadCtor({
-    token: getSquadInvestorCheckoutToken(),
+    key: getSquadPaymentModalKey(),
     email,
     amount: amountKobo,
     currency_code: "NGN",
