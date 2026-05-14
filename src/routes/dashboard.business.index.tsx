@@ -7,10 +7,17 @@ import {
   useBusinessActiveListing,
   useBusinessActivity,
   useBusinessRevenueChart,
+  type BusinessRevenuePeriod,
   useBusinessRating,
+  useBusinessBalance,
 } from "@/hooks/queries";
 import { useProtectedRoute } from "@/hooks/use-protected-route";
-import { formatNaira, formatNairaFull } from "@/lib/utils";
+import {
+  formatNaira,
+  formatNairaFull,
+  formatActivityTimestamp,
+  formatChartAxisLabel,
+} from "@/lib/utils";
 import { BUSINESS_DASHBOARD_SNAPSHOT_KEY, PAGES } from "@/lib/constants";
 import { useRepayMutation, usePayoutTransferMutation } from "@/hooks/mutations";
 import { Loader2, AlertTriangle } from "lucide-react";
@@ -22,6 +29,7 @@ const BusinessDashboard = () => {
   const { data: stats, isLoading: isStatsLoading } = useBusinessStats();
   const { data: activeListing, isLoading: isListingLoading } = useBusinessActiveListing();
   const { data: activity, isLoading: isActivityLoading } = useBusinessActivity();
+  const { data: balanceData, isLoading: isBalanceLoading } = useBusinessBalance();
   const repayMut = useRepayMutation();
   const transferMut = usePayoutTransferMutation();
   const businessProfile = (profileData as any)?.business_profiles || {};
@@ -89,58 +97,77 @@ const BusinessDashboard = () => {
           <h1 className="font-display text-3xl">
             {businessProfile.businessName || "Your Business"}
           </h1>
-          <div className="flex items-center gap-3">
+          {/* <div className="flex items-center gap-3">
             <button
               onClick={() => setWithdrawOpen(true)}
               className="rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-secondary"
             >
               Withdraw balance
             </button>
-            <Link
-              to={PAGES.DASHBOARD_BUSINESS_PAYMENTS}
-              className="text-sm text-primary hover:underline"
-            >
-              Payment link →
-            </Link>
-          </div>
+          </div> */}
         </div>
 
         <section className="mt-6 grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-border bg-card p-6">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">
-              Bridge Rating
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                Bridge rating
+              </div>
+              <span className="shrink-0 rounded-md border border-border bg-secondary/60 px-2.5 py-1 text-xs font-medium text-foreground">
+                Tier {businessProfile.tier ?? 1}
+              </span>
             </div>
-            <div className="mt-1 font-display text-4xl">
-              {isRatingLoading ? (
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              ) : (
-                standing
-              )}
-            </div>
-            <div className="mt-1 text-sm text-muted-foreground">
-              {overallScore.toFixed(2)} / 100
+            <div className="mt-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div className="font-display text-3xl sm:text-4xl">
+                {isRatingLoading ? (
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                ) : (
+                  standing
+                )}
+              </div>
+              {/* <div className="text-sm text-muted-foreground tabular-nums">
+                Score {overallScore.toFixed(0)}
+                <span className="text-muted-foreground/70"> / 100</span>
+              </div> */}
             </div>
             <div className="mt-4 h-2 rounded-full bg-secondary">
               <div className="h-2 rounded-full bg-primary" style={{ width: `${ratingPct}%` }} />
             </div>
-            <p className="mt-3 text-sm text-muted-foreground">
+            <p className="mt-4 text-sm text-muted-foreground">
               {overallScore < 50
-                ? "Increase your revenue to improve your score."
-                : "Keep up the good work to reach the next standing."}
+                ? "Earn consistent revenue to improve your standing."
+                : "Keep repayment steady to reach the next standing."}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {businessProfile.tier === 1
+                ? "Tier 1: complete a successful repayment to unlock Tier 2."
+                : "Higher tiers unlock larger listing caps as you build history."}
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">Tier</div>
-            <div className="mt-1 inline-flex items-center gap-2">
-              <span className="rounded-md bg-primary/10 px-3 py-1 text-primary font-sans text-sm">
-                Tier {businessProfile.tier || 1}
-              </span>
+
+          <div className="flex flex-col justify-between rounded-2xl border border-border bg-card p-6">
+            <div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                Ledger balance
+              </div>
+              <div className="mt-2 font-display text-3xl sm:text-4xl">
+                {isBalanceLoading ? (
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                ) : (
+                  formatNairaFull(balanceData?.balance ?? 0)
+                )}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Available on your internal ledger. Withdraw to your registered bank account.
+              </p>
             </div>
-            <p className="mt-4 text-sm text-muted-foreground">
-              {businessProfile.tier === 1
-                ? "Complete 1 successful repayment to unlock Tier 2."
-                : "You're on track."}
-            </p>
+            <button
+              type="button"
+              onClick={() => setWithdrawOpen(true)}
+              className="mt-6 w-full rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium hover:bg-secondary sm:mt-4 sm:w-auto sm:self-start"
+            >
+              Withdraw balance
+            </button>
           </div>
         </section>
 
@@ -283,8 +310,8 @@ const BusinessDashboard = () => {
                     <div className="font-medium">{a.title}</div>
                     <div className="text-muted-foreground">{a.detail}</div>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(a.createdAt).toLocaleDateString()}
+                  <span className="shrink-0 text-right text-xs text-muted-foreground">
+                    {formatActivityTimestamp(a.createdAt)}
                   </span>
                 </li>
               ))}
@@ -372,26 +399,36 @@ const Stat = ({ label, value }: { label: string; value: string }) => {
 };
 
 const BusinessChartsSection = () => {
-  const [period, setPeriod] = useState<"daily" | "monthly" | "yearly">("monthly");
-  const [year, setYear] = useState(new Date().getFullYear());
+  const now = new Date();
+  const [period, setPeriod] = useState<BusinessRevenuePeriod>("hourly");
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [day, setDay] = useState(now.getDate());
 
-  const { data: chartResponse, isLoading } = useBusinessRevenueChart(period, year);
+  const daysInSelectedMonth = new Date(year, month, 0).getDate();
 
-  // Parse data or provide rich fallback mock data to WOW the user if endpoint is empty/sandbox
-  const rawData =
-    chartResponse?.data && chartResponse.data.length > 0
-      ? chartResponse.data
-      : [
-          { label: "Jan", totalIncoming: 15000000, totalSwept: 1275000 },
-          { label: "Feb", totalIncoming: 18000000, totalSwept: 1530000 },
-          { label: "Mar", totalIncoming: 22000000, totalSwept: 1870000 },
-          { label: "Apr", totalIncoming: 25000000, totalSwept: 2125000 },
-          { label: "May", totalIncoming: 31000000, totalSwept: 2635000 },
-          { label: "Jun", totalIncoming: 38000000, totalSwept: 3230000 },
-        ];
+  useEffect(() => {
+    setDay((d) => Math.min(d, new Date(year, month, 0).getDate()));
+  }, [year, month]);
 
-  const maxRev = Math.max(...rawData.map((d: any) => d.totalIncoming || 0), 1000000);
-  const maxSweep = Math.max(...rawData.map((d: any) => d.totalSwept || 0), 100000);
+  const {
+    data: chartResponse,
+    isLoading,
+    isError,
+    error,
+  } = useBusinessRevenueChart(
+    period,
+    period === "yearly" ? undefined : year,
+    period === "daily" || period === "hourly" ? month : undefined,
+    period === "hourly" ? day : undefined,
+  );
+
+  const rawData = chartResponse?.data ?? [];
+  const hasData = rawData.length > 0;
+  const yearOptions = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i);
+
+  const maxRev = Math.max(...rawData.map((d) => d.totalIncoming), 1);
+  const maxSweep = Math.max(...rawData.map((d) => d.totalSwept), 1);
 
   type ChartPoint = {
     x: number;
@@ -400,14 +437,13 @@ const BusinessChartsSection = () => {
     label: string;
   };
 
-  // Helper to compute SVG points
-  const getChartPoints = (key: string, maxVal: number): ChartPoint[] => {
+  const getChartPoints = (key: "totalIncoming" | "totalSwept", maxVal: number): ChartPoint[] => {
     const len = rawData.length;
-    return rawData.map((d: any, idx: number) => {
+    return rawData.map((d, idx) => {
       const val = d[key] || 0;
       const x = 30 + (idx / Math.max(1, len - 1)) * 340;
       const y = 130 - (val / maxVal) * 100;
-      return { x, y, val, label: d.label.replace("2025-", "").replace("2026-", "") };
+      return { x, y, val, label: formatChartAxisLabel(d.label, period) };
     });
   };
 
@@ -426,22 +462,34 @@ const BusinessChartsSection = () => {
       ? `${sweepPoints[0].x},130 ${sweepPolylineStr} ${sweepPoints[sweepPoints.length - 1].x},130`
       : "";
 
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
   return (
     <section className="mt-6 rounded-3xl border border-border bg-card p-6 shadow-xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-display text-xl text-foreground">Revenue & sweep analytics</h2>
-          {/* <p className="text-xs text-muted-foreground mt-0.5">
-            Chronological multi-dimensional visualization of gross inflows and automated
-            distributions
-          </p> */}
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2">
           <select
             value={period}
-            onChange={(e: any) => setPeriod(e.target.value)}
+            onChange={(e) => setPeriod(e.target.value as BusinessRevenuePeriod)}
             className="rounded-xl border border-border bg-secondary/50 px-3 py-1.5 text-xs text-foreground focus:outline-none"
           >
+            <option value="hourly">Hourly</option>
             <option value="daily">Daily</option>
             <option value="monthly">Monthly</option>
             <option value="yearly">Yearly</option>
@@ -449,11 +497,41 @@ const BusinessChartsSection = () => {
           {period !== "yearly" && (
             <select
               value={year}
-              onChange={(e: any) => setYear(Number(e.target.value))}
+              onChange={(e) => setYear(Number(e.target.value))}
               className="rounded-xl border border-border bg-secondary/50 px-3 py-1.5 text-xs text-foreground focus:outline-none"
             >
-              <option value={2025}>2025</option>
-              <option value={2026}>2026</option>
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          )}
+          {(period === "daily" || period === "hourly") && (
+            <select
+              value={month}
+              onChange={(e) => setMonth(Number(e.target.value))}
+              className="rounded-xl border border-border bg-secondary/50 px-3 py-1.5 text-xs text-foreground focus:outline-none"
+            >
+              {monthNames.map((name, i) => (
+                <option key={name} value={i + 1}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          )}
+          {period === "hourly" && (
+            <select
+              value={day}
+              onChange={(e) => setDay(Number(e.target.value))}
+              aria-label="Day of month"
+              className="rounded-xl border border-border bg-secondary/50 px-3 py-1.5 text-xs text-foreground focus:outline-none"
+            >
+              {Array.from({ length: daysInSelectedMonth }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
             </select>
           )}
         </div>
@@ -463,17 +541,24 @@ const BusinessChartsSection = () => {
         <div className="flex justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
+      ) : isError ? (
+        <div className="mt-8 rounded-2xl border border-destructive/30 bg-destructive/5 py-12 text-center text-sm text-destructive px-4">
+          {error instanceof Error ? error.message : "Could not load revenue data."}
+        </div>
+      ) : !hasData ? (
+        <div className="mt-8 rounded-2xl border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
+          No revenue data for this selection yet.
+        </div>
       ) : (
         <div className="mt-8 grid gap-8 md:grid-cols-2">
-          {/* Revenue over time line chart */}
           <div className="rounded-2xl border border-border/50 bg-secondary/10 p-4 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-              Revenue over time
+            <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-primary/5 blur-2xl pointer-events-none" />
+            <div className="relative mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Incoming revenue
             </div>
 
             <div className="relative w-full pt-2">
-              <svg viewBox="0 0 400 160" className="w-full h-auto overflow-visible">
+              <svg viewBox="0 0 400 160" className="h-auto w-full overflow-visible">
                 <defs>
                   <linearGradient id="revGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop
@@ -489,7 +574,6 @@ const BusinessChartsSection = () => {
                   </linearGradient>
                 </defs>
 
-                {/* Grid lines */}
                 <line
                   x1="30"
                   y1="30"
@@ -517,10 +601,8 @@ const BusinessChartsSection = () => {
                   strokeOpacity="0.1"
                 />
 
-                {/* Area under curve */}
                 {revAreaStr && <polygon points={revAreaStr} fill="url(#revGradient)" />}
 
-                {/* Main line */}
                 {revPolylineStr && (
                   <polyline
                     points={revPolylineStr}
@@ -532,7 +614,6 @@ const BusinessChartsSection = () => {
                   />
                 )}
 
-                {/* Interactive points */}
                 {revPoints.map((p, idx) => (
                   <g key={idx} className="group/point cursor-pointer">
                     <circle
@@ -549,10 +630,9 @@ const BusinessChartsSection = () => {
                 ))}
               </svg>
 
-              {/* X Axis Labels */}
-              <div className="flex justify-between px-[7.5%] mt-2 text-[10px] text-muted-foreground">
+              <div className="mt-2 flex justify-between px-[7.5%] text-[10px] text-muted-foreground">
                 {revPoints.map((p, idx) => (
-                  <span key={idx} className="truncate max-w-12.5 text-center">
+                  <span key={idx} className="max-w-12.5 truncate text-center">
                     {p.label}
                   </span>
                 ))}
@@ -560,15 +640,14 @@ const BusinessChartsSection = () => {
             </div>
           </div>
 
-          {/* Sweeps over time line chart */}
           <div className="rounded-2xl border border-border/50 bg-secondary/10 p-4 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-32 h-32 bg-success/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-              Sweeps over time
+            <div className="absolute top-0 left-0 h-32 w-32 rounded-full bg-success/5 blur-2xl pointer-events-none" />
+            <div className="relative mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Swept to investors
             </div>
 
             <div className="relative w-full pt-2">
-              <svg viewBox="0 0 400 160" className="w-full h-auto overflow-visible">
+              <svg viewBox="0 0 400 160" className="h-auto w-full overflow-visible">
                 <defs>
                   <linearGradient id="sweepGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop
@@ -584,7 +663,6 @@ const BusinessChartsSection = () => {
                   </linearGradient>
                 </defs>
 
-                {/* Grid lines */}
                 <line
                   x1="30"
                   y1="30"
@@ -612,10 +690,8 @@ const BusinessChartsSection = () => {
                   strokeOpacity="0.1"
                 />
 
-                {/* Area under curve */}
                 {sweepAreaStr && <polygon points={sweepAreaStr} fill="url(#sweepGradient)" />}
 
-                {/* Main line */}
                 {sweepPolylineStr && (
                   <polyline
                     points={sweepPolylineStr}
@@ -627,7 +703,6 @@ const BusinessChartsSection = () => {
                   />
                 )}
 
-                {/* Interactive points */}
                 {sweepPoints.map((p, idx) => (
                   <g key={idx} className="group/point cursor-pointer">
                     <circle
@@ -644,10 +719,9 @@ const BusinessChartsSection = () => {
                 ))}
               </svg>
 
-              {/* X Axis Labels */}
-              <div className="flex justify-between px-[7.5%] mt-2 text-[10px] text-muted-foreground">
+              <div className="mt-2 flex justify-between px-[7.5%] text-[10px] text-muted-foreground">
                 {sweepPoints.map((p, idx) => (
-                  <span key={idx} className="truncate max-w-12.5 text-center">
+                  <span key={idx} className="max-w-12.5 truncate text-center">
                     {p.label}
                   </span>
                 ))}
