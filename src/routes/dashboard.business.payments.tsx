@@ -276,7 +276,10 @@ const Payments = () => {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {payments.map((p: any) => {
-                    const incoming = p.incomingPaymentAmount ?? p.incomingKobo ?? 0;
+                    const hasIncoming = p.incomingPaymentAmount != null || p.incomingKobo != null;
+                    const incoming = hasIncoming
+                      ? Number(p.incomingPaymentAmount ?? p.incomingKobo ?? 0)
+                      : null;
                     const sweep = p.sweepAmount ?? p.sweepKobo ?? 0;
                     const net = p.netAmountRetained ?? p.netKobo ?? 0;
                     const processedAt = p.processedAt || p.createdAt;
@@ -287,7 +290,7 @@ const Payments = () => {
                         <td className="py-3">
                           {processedAt ? new Date(processedAt).toLocaleDateString() : "—"}
                         </td>
-                        <td>{formatNairaFull(incoming)}</td>
+                        <td>{incoming != null ? formatNairaFull(incoming) : "—"}</td>
                         <td>{sweepApplied ? formatNairaFull(sweep) : "—"}</td>
                         <td className="font-medium">{formatNairaFull(net)}</td>
                         <td>
