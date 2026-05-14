@@ -247,6 +247,32 @@ export const useDepositMutation = () => {
   });
 };
 
+/** POST /investor/:userId/checkout — returns Squad checkout URL (wallet top-up). */
+export const useInvestorWalletCheckoutMutation = () => {
+  const { token } = useAuth();
+
+  const getUserId = () => {
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      return payload.sub || payload.id || null;
+    } catch {
+      return null;
+    }
+  };
+
+  return useMutation({
+    mutationFn: (amountKobo: number) => {
+      const userId = getUserId();
+      if (!userId) throw new Error("Not authenticated");
+      return apiFetch<any>(`/investor/${userId}/checkout`, {
+        method: "POST",
+        body: { amount: amountKobo },
+      });
+    },
+  });
+};
+
 export const useUpdatePreferencesMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
