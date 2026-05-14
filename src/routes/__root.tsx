@@ -126,72 +126,74 @@ const Header = () => {
           </span>
           <span className="font-display text-xl tracking-tight">Bridge</span>
         </Link>
-        <nav className="hidden items-center gap-6 md:flex text-sm">
-          {userType === "investor" && (
-            <>
-              <Link
-                to={PAGES.DASHBOARD_INVESTOR}
-                className={cn(
-                  "text-muted-foreground hover:text-foreground",
-                  pathname === PAGES.DASHBOARD_INVESTOR && "text-primary hover:text-primary",
-                )}
-              >
-                Dashboard
-              </Link>
-              <Link
-                to={PAGES.DASHBOARD_INVESTOR_PORTFOLIO}
-                className={cn(
-                  "text-muted-foreground hover:text-foreground",
-                  pathname === PAGES.DASHBOARD_INVESTOR_PORTFOLIO &&
-                    "text-primary hover:text-primary",
-                )}
-              >
-                Portfolio
-              </Link>
-              <Link
-                to={PAGES.NOTIFICATIONS}
-                className={cn(
-                  "text-muted-foreground hover:text-foreground",
-                  pathname === PAGES.NOTIFICATIONS && "text-primary hover:text-primary",
-                )}
-              >
-                Notifications
-              </Link>
-            </>
-          )}
-          {userType === "business" && (
-            <>
-              <Link
-                to={PAGES.DASHBOARD_BUSINESS}
-                className={cn(
-                  "text-muted-foreground hover:text-foreground",
-                  pathname === PAGES.DASHBOARD_BUSINESS && "text-primary hover:text-primary",
-                )}
-              >
-                Dashboard
-              </Link>
-              <Link
-                to={PAGES.DASHBOARD_BUSINESS_PAYMENTS}
-                className={cn(
-                  "text-muted-foreground hover:text-foreground",
-                  pathname === PAGES.DASHBOARD_BUSINESS_PAYMENTS &&
-                    "text-primary hover:text-primary",
-                )}
-              >
-                Payments
-              </Link>
-              <Link
-                to={PAGES.NOTIFICATIONS}
-                className={cn(
-                  "text-muted-foreground hover:text-foreground",
-                  pathname === PAGES.NOTIFICATIONS && "text-primary hover:text-primary",
-                )}
-              >
-                Notifications
-              </Link>
-            </>
-          )}
-        </nav>
+        {pathname !== "/" ? (
+          <nav className="hidden items-center gap-6 md:flex text-sm">
+            {userType === "investor" && (
+              <>
+                <Link
+                  to={PAGES.DASHBOARD_INVESTOR}
+                  className={cn(
+                    "text-muted-foreground hover:text-foreground",
+                    pathname === PAGES.DASHBOARD_INVESTOR && "text-primary hover:text-primary",
+                  )}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  to={PAGES.DASHBOARD_INVESTOR_PORTFOLIO}
+                  className={cn(
+                    "text-muted-foreground hover:text-foreground",
+                    pathname === PAGES.DASHBOARD_INVESTOR_PORTFOLIO &&
+                      "text-primary hover:text-primary",
+                  )}
+                >
+                  Portfolio
+                </Link>
+                <Link
+                  to={PAGES.NOTIFICATIONS}
+                  className={cn(
+                    "text-muted-foreground hover:text-foreground",
+                    pathname === PAGES.NOTIFICATIONS && "text-primary hover:text-primary",
+                  )}
+                >
+                  Notifications
+                </Link>
+              </>
+            )}
+            {userType === "business" && (
+              <>
+                <Link
+                  to={PAGES.DASHBOARD_BUSINESS}
+                  className={cn(
+                    "text-muted-foreground hover:text-foreground",
+                    pathname === PAGES.DASHBOARD_BUSINESS && "text-primary hover:text-primary",
+                  )}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  to={PAGES.DASHBOARD_BUSINESS_PAYMENTS}
+                  className={cn(
+                    "text-muted-foreground hover:text-foreground",
+                    pathname === PAGES.DASHBOARD_BUSINESS_PAYMENTS &&
+                      "text-primary hover:text-primary",
+                  )}
+                >
+                  Payments
+                </Link>
+                <Link
+                  to={PAGES.NOTIFICATIONS}
+                  className={cn(
+                    "text-muted-foreground hover:text-foreground",
+                    pathname === PAGES.NOTIFICATIONS && "text-primary hover:text-primary",
+                  )}
+                >
+                  Notifications
+                </Link>
+              </>
+            )}
+          </nav>
+        ) : null}
         <div className="flex items-center gap-3">
           {userType !== "guest" ? (
             <button
