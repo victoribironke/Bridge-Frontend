@@ -158,6 +158,7 @@ export const usePayoutTransferMutation = () => {
       queryClient.invalidateQueries({ queryKey: ["payouts"] });
       queryClient.invalidateQueries({ queryKey: ["business-payments"] });
       queryClient.invalidateQueries({ queryKey: ["business-sweep-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["business-balance"] });
     },
   });
 };
