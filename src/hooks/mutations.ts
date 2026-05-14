@@ -188,6 +188,25 @@ export const useInvestMutation = () => {
       queryClient.invalidateQueries({ queryKey: ["investor-wallet"] });
       queryClient.invalidateQueries({ queryKey: ["investor-deals"] });
       queryClient.invalidateQueries({ queryKey: ["listing", variables.listingId] });
+      queryClient.invalidateQueries({ queryKey: ["listing-funding", variables.listingId] });
+    },
+  });
+};
+
+export const useCancelInvestmentMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (investmentId: string) =>
+      apiFetch<{ success: boolean; message: string }>(`/investments/${investmentId}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["investor-deals"] });
+      queryClient.invalidateQueries({ queryKey: ["investor-wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["investor-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["listing-funding"] });
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
+      queryClient.invalidateQueries({ queryKey: ["listing"] });
     },
   });
 };
