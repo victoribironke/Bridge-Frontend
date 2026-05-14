@@ -8,6 +8,7 @@ import {
   usePaymentLink,
   useInvestorPerformanceChart,
   useListingFunding,
+  useListingDetail,
   type InvestorReturnsPeriod,
 } from "@/hooks/queries";
 import { useProtectedRoute } from "@/hooks/use-protected-route";
@@ -20,6 +21,45 @@ import { formatNaira, formatNairaFull, formatChartAxisLabel } from "@/lib/utils"
 import { PAGES } from "@/lib/constants";
 import { Loader2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
+
+/**
+ * Deals from GET /investor/:id/deals are often flat (listingId, amounts, status, …).
+ * When `listings` is missing or not populated, load listing detail for sector, rating,
+ * tranches, etc. `businessName` on the deal is preferred and avoids waiting on listing for the title.
+ */
+const useDealListing = (d: any) => {
+  const embedded = d.listings;
+  const listingId = (d.listingId ?? d.listing_id ?? embedded?.id) as string | undefined;
+  const hasRichEmbedded =
+    embedded != null &&
+    typeof embedded === "object" &&
+    (embedded.business_profiles != null ||
+      embedded.sector != null ||
+      embedded.aiProfile != null ||
+      embedded.useOfFunds != null ||
+      embedded.capitalRequested != null);
+  const fetchId = !hasRichEmbedded && listingId ? listingId : "";
+  const { data: fetched, isLoading } = useListingDetail(fetchId);
+  const listing = hasRichEmbedded ? embedded : (fetched ?? {});
+  return {
+    listingId,
+    listing,
+    isListingLoading: Boolean(fetchId) && isLoading,
+  };
+};
+
+const hasDealBusinessName = (d: any) => {
+  const n = d.businessName ?? d.business_name;
+  return typeof n === "string" && n.trim().length > 0;
+};
+
+/** Prefer `businessName` / `business_name` on the deal; then nested listing profile. */
+const dealBusinessName = (d: any, listing?: any) => {
+  if (hasDealBusinessName(d)) return String(d.businessName ?? d.business_name).trim();
+  const fromListing = listing?.business_profiles?.businessName;
+  if (typeof fromListing === "string" && fromListing.trim()) return fromListing.trim();
+  return "Business";
+};
 
 const Portfolio = () => {
   useProtectedRoute("investor");
@@ -50,25 +90,34 @@ const Portfolio = () => {
   const completedDeals = deals.filter((d: any) => d.status === "completed");
   const defaultedDeals = deals.filter((d: any) => d.status === "defaulted");
 
+  const completedDeployed = completedDeals.reduce(
+    (sum: number, d: any) => sum + Number(d.amountCommitted ?? 0),
+    0,
+  );
+  const completedReturns = completedDeals.reduce(
+    (sum: number, d: any) => sum + Number(d.totalReturnReceived ?? 0),
+    0,
+  );
   const overallRoi =
-    summary?.totalCapitalDeployed > 0
-      ? ((summary.totalReturnsReceived - summary.totalCapitalDeployed) /
-        summary.totalCapitalDeployed) *
-      100
-      : 0;
+    completedDeployed > 0
+      ? ((completedReturns - completedDeployed) / completedDeployed) * 100
+      : null;
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
       <h1 className="font-display text-3xl">Your portfolio</h1>
 
-      <section className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+      <section className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
         {isSummaryLoading ? (
           <div className="col-span-full flex justify-center py-4">
             <Loader2 className="animate-spin text-primary" />
           </div>
         ) : (
           <>
-            <Stat label="Capital deployed" value={formatNairaFull(summary?.totalCapitalDeployed || 0)} />
+            <Stat
+              label="Capital deployed"
+              value={formatNairaFull(summary?.totalCapitalDeployed || 0)}
+            />
             <Stat
               label="Returns received"
               value={formatNairaFull(summary?.totalReturnsReceived || 0)}
@@ -76,7 +125,10 @@ const Portfolio = () => {
             <Stat label="Completed" value={String(completedDeals.length)} />
             <Stat label="Funding" value={String(inactiveDeals.length)} />
             <Stat label="Active" value={String(activeDeals.length)} />
-            <Stat label="Overall ROI" value={`${overallRoi.toFixed(1)}%`} />
+            <Stat
+              label="Overall ROI"
+              value={overallRoi == null ? "—" : `${overallRoi.toFixed(1)}%`}
+            />
           </>
         )}
       </section>
@@ -179,32 +231,7 @@ const Portfolio = () => {
                   No completed deals yet.
                 </div>
               ) : (
-                completedDeals.map((d: any) => {
-                  const businessName = d.listings?.business_profiles?.businessName || "Business";
-                  const targetMonths = d.listings?.targetRepaymentMonths || 0;
-                  const returnPct = d.listings?.totalReturnPercent || 0;
-                  return (
-                    <div key={d.id} className="rounded-2xl border border-border bg-card p-5">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-display text-xl">{businessName}</h3>
-                          <div className="mt-1 text-sm text-muted-foreground">
-                            Completed in {targetMonths} months
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-display text-xl">
-                            {formatNairaFull(d.totalReturnReceived)}
-                          </div>
-                          <div className="text-xs text-success">+{returnPct}% return</div>
-                        </div>
-                      </div>
-                      <div className="mt-4 text-sm text-muted-foreground">
-                        Invested {formatNairaFull(d.amountCommitted)}
-                      </div>
-                    </div>
-                  );
-                })
+                completedDeals.map((d: any) => <CompletedDealCard key={d.id} d={d} />)
               ))}
 
             {tab === "defaulted" &&
@@ -213,25 +240,7 @@ const Portfolio = () => {
                   No defaults — your default pool is ready if anything ever does.
                 </div>
               ) : (
-                defaultedDeals.map((d: any) => {
-                  const businessName = d.listings?.business_profiles?.businessName || "Business";
-                  const netLoss = d.amountCommitted - d.totalReturnReceived;
-                  return (
-                    <div key={d.id} className="rounded-2xl border border-border bg-card p-5">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-display text-xl">{businessName}</h3>
-                        <span className="text-xs text-destructive">
-                          Net loss {formatNairaFull(Math.max(0, netLoss))}
-                        </span>
-                      </div>
-                      <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
-                        <Mini label="Invested" value={formatNairaFull(d.amountCommitted)} />
-                        <Mini label="Recovered" value={formatNairaFull(d.totalReturnReceived)} />
-                        <Mini label="Net loss" value={formatNairaFull(Math.max(0, netLoss))} />
-                      </div>
-                    </div>
-                  );
-                })
+                defaultedDeals.map((d: any) => <DefaultedDealCard key={d.id} d={d} />)
               ))}
           </div>
         )}
@@ -511,8 +520,7 @@ const parseAiProfileLocal = (aiProfile: any) => {
 };
 
 const InactiveDealCard = ({ d }: { d: any }) => {
-  const listing = d.listings ?? {};
-  const listingId = (d.listingId ?? listing.id) as string | undefined;
+  const { listing, listingId, isListingLoading } = useDealListing(d);
   const cancelMut = useCancelInvestmentMutation();
   const { data: funding, isLoading: isFundingLoading } = useListingFunding(
     listingId,
@@ -524,7 +532,8 @@ const InactiveDealCard = ({ d }: { d: any }) => {
   const investors = funding?.investorCount ?? listing.investorCount ?? 0;
   const fundedPct = capital > 0 ? Math.min(100, Math.round((committed / capital) * 100)) : 0;
 
-  const businessName = listing.business_profiles?.businessName || "Business";
+  const businessName = dealBusinessName(d, listing);
+  const titlePending = !hasDealBusinessName(d) && isListingLoading;
   const sector = listing.sector || "—";
   const tier = listing.business_profiles?.tier ?? listing.tier ?? 1;
   const standing =
@@ -566,7 +575,16 @@ const InactiveDealCard = ({ d }: { d: any }) => {
               Awaiting full funding
             </span>
           </div>
-          <h3 className="mt-3 font-display text-2xl md:text-3xl">{businessName}</h3>
+          <h3 className="mt-3 font-display text-2xl md:text-3xl">
+            {titlePending ? (
+              <span className="inline-flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                Loading…
+              </span>
+            ) : (
+              businessName
+            )}
+          </h3>
           <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{blurb}</p>
           <p className="mt-2 text-xs text-muted-foreground">
             Target horizon · {targetMonths} months ·{" "}
@@ -639,13 +657,21 @@ const InactiveDealCard = ({ d }: { d: any }) => {
 
 const ActiveCard = ({ d }: { d: any }) => {
   const [open, setOpen] = useState(false);
+  const { listing, isListingLoading } = useDealListing(d);
 
-  const businessName = d.listings?.business_profiles?.businessName || "Business";
-  const standing = d.listings?.bridge_ratings?.overallStanding || "Seed";
+  const businessName = dealBusinessName(d, listing);
+  const titlePending = !hasDealBusinessName(d) && isListingLoading;
+  const standing =
+    listing.bridge_ratings?.standing || listing.bridge_ratings?.overallStanding || "Seed";
   // The backend might not give `sweeps` and `tranches` directly in the deal object,
   // we would usually need to fetch `/deals/:listingId/sweeps` but we will safely fallback.
   const sweeps = d.sweeps || [];
-  const tranches = d.listings?.aiProfile?.tranches || [];
+  const ai = parseAiProfileLocal(listing.aiProfile);
+  const tranches = Array.isArray(ai?.tranches)
+    ? ai.tranches
+    : Array.isArray(listing.aiProfile?.tranches)
+      ? listing.aiProfile.tranches
+      : [];
 
   const pct =
     d.totalReturnDue > 0
@@ -656,10 +682,19 @@ const ActiveCard = ({ d }: { d: any }) => {
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="font-display text-xl">{businessName}</h3>
+          <h3 className="font-display text-xl">
+            {titlePending ? (
+              <span className="inline-flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                Loading…
+              </span>
+            ) : (
+              businessName
+            )}
+          </h3>
           <div className="mt-1 text-sm text-muted-foreground">
             Standing · {standing} · target{" "}
-            {d.listings?.targetRepaymentMonths ?? d.targetRepaymentMonths ?? 0} months
+            {d.targetRepaymentMonths ?? listing.targetRepaymentMonths ?? 0} months
           </div>
         </div>
         <div className="text-right">
@@ -739,6 +774,56 @@ const Mini = ({ label, value }: { label: string; value: string }) => {
     <div>
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="font-medium">{value}</div>
+    </div>
+  );
+};
+
+const CompletedDealCard = ({ d }: { d: any }) => {
+  const businessName = dealBusinessName(d, null);
+  const targetMonths = d.targetRepaymentMonths ?? 0;
+  const returnPct =
+    d.amountCommitted > 0
+      ? Math.round(((d.totalReturnReceived - d.amountCommitted) / d.amountCommitted) * 1000) / 10
+      : 0;
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-display text-xl">{businessName}</h3>
+          <div className="mt-1 text-sm text-muted-foreground">
+            Completed in {targetMonths} months
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="font-display text-xl">{formatNairaFull(d.totalReturnReceived)}</div>
+          <div className="text-xs text-success">+{returnPct}% return</div>
+        </div>
+      </div>
+      <div className="mt-4 text-sm text-muted-foreground">
+        Invested {formatNairaFull(d.amountCommitted)}
+      </div>
+    </div>
+  );
+};
+
+const DefaultedDealCard = ({ d }: { d: any }) => {
+  const businessName = dealBusinessName(d, null);
+  const netLoss = d.amountCommitted - d.totalReturnReceived;
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-center justify-between">
+        <h3 className="font-display text-xl">{businessName}</h3>
+        <span className="text-xs text-destructive">
+          Net loss {formatNairaFull(Math.max(0, netLoss))}
+        </span>
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
+        <Mini label="Invested" value={formatNairaFull(d.amountCommitted)} />
+        <Mini label="Recovered" value={formatNairaFull(d.totalReturnReceived)} />
+        <Mini label="Net loss" value={formatNairaFull(Math.max(0, netLoss))} />
+      </div>
     </div>
   );
 };
