@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import {
   useBusinessPaymentLink,
   useBusinessSweepSummary,
@@ -19,8 +20,12 @@ import { formatNaira, formatNairaFull } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+const INFLOW_POLL_INTERVAL_MS = 1000;
+const INFLOW_POLL_TICKS = 20;
+
 const Payments = () => {
   useProtectedRoute("business");
+  const queryClient = useQueryClient();
   const { virtualAccountNumber } = useAuth();
   const { data: linkData, isLoading: isLinkLoading } = useBusinessPaymentLink();
   const { data: sweepSummary, isLoading: isSweepLoading } = useBusinessSweepSummary();
@@ -46,6 +51,34 @@ const Payments = () => {
     remark: "Bridge payout withdrawal",
   });
   const [verifiedAccount, setVerifiedAccount] = useState<any>(null);
+
+  const pollTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const clearInflowPoll = () => {
+    pollTimeoutsRef.current.forEach((id) => clearTimeout(id));
+    pollTimeoutsRef.current = [];
+  };
+
+  const refetchPaymentsStats = () =>
+    Promise.all([
+      queryClient.refetchQueries({ queryKey: ["business-sweep-summary"] }),
+      queryClient.refetchQueries({ queryKey: ["business-payments"] }),
+      queryClient.refetchQueries({ queryKey: ["business-balance"] }),
+    ]);
+
+  const startInflowPoll = () => {
+    clearInflowPoll();
+    for (let i = 0; i < INFLOW_POLL_TICKS; i++) {
+      const id = setTimeout(() => {
+        void refetchPaymentsStats();
+      }, i * INFLOW_POLL_INTERVAL_MS);
+      pollTimeoutsRef.current.push(id);
+    }
+  };
+
+  useEffect(() => {
+    return () => clearInflowPoll();
+  }, []);
 
   const payments = paymentsData || [];
   const payouts = payoutsData?.data || [];
@@ -152,6 +185,7 @@ const Payments = () => {
                       data.message ||
                         `Simulation started (${data.deposits} deposits every ${data.intervalSeconds}s).`,
                     );
+                    startInflowPoll();
                   },
                   onError: (err) => {
                     toast.error(err.message || "Could not start inflow simulation.");
