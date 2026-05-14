@@ -40,6 +40,29 @@ export const useListingDetail = (id: string) => {
   });
 };
 
+/** GET /listings/:id/funding — live funding totals for a listing (use while your commitment is inactive). */
+export type ListingFundingSnapshot = {
+  capitalRequested: number;
+  totalCommitted: number;
+  investorCount: number;
+};
+
+export const useListingFunding = (listingId: string | undefined, enabled: boolean) => {
+  return useQuery({
+    queryKey: ["listing-funding", listingId],
+    queryFn: async () => {
+      const raw = await apiFetch<any>(`/listings/${listingId}/funding`);
+      return {
+        capitalRequested: Number(raw.capitalRequested ?? raw.capital_requested ?? 0),
+        totalCommitted: Number(raw.totalCommitted ?? raw.total_committed ?? 0),
+        investorCount: Number(raw.investorCount ?? raw.investor_count ?? 0),
+      } satisfies ListingFundingSnapshot;
+    },
+    enabled: !!listingId && enabled,
+    staleTime: 15_000,
+  });
+};
+
 export const usePreviewTerms = (
   capitalRequested?: number,
   preferredRepaymentMonths = 12,
@@ -103,7 +126,7 @@ export const usePaymentLink = () => {
   });
 };
 
-export const useInvestorDeals = (status?: "active" | "completed" | "defaulted") => {
+export const useInvestorDeals = (status?: "inactive" | "active" | "completed" | "defaulted") => {
   const userId = useUserId();
   return useQuery({
     queryKey: ["investor-deals", userId, status],
