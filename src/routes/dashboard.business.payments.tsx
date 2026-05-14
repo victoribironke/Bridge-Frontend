@@ -16,7 +16,7 @@ import {
 } from "@/hooks/mutations";
 import { useProtectedRoute } from "@/hooks/use-protected-route";
 import { useAuth } from "@/lib/auth";
-import { formatNaira, formatNairaFull } from "@/lib/utils";
+import { formatNaira, formatNairaFull, formatActivityTimestamp } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -321,9 +321,7 @@ const Payments = () => {
 
                     return (
                       <tr key={p.id}>
-                        <td className="py-3">
-                          {processedAt ? new Date(processedAt).toLocaleDateString() : "—"}
-                        </td>
+                        <td className="py-3">{formatActivityTimestamp(processedAt)}</td>
                         <td>{incoming != null ? formatNairaFull(incoming) : "—"}</td>
                         <td>{sweepApplied ? formatNairaFull(sweep) : "—"}</td>
                         <td className="font-medium">{formatNairaFull(net)}</td>
