@@ -632,9 +632,9 @@ Sandbox only: simulates an incoming bank deposit to the investor's Squad virtual
 
 **Response 200:** Array of sweep events. Each item extends [Sweep Event object](#sweep-event-object) with one extra field:
 
-| Field          | Type           | Notes                                                                                                                                                                 |
-| -------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `distribution` | object \| null | Present only if the caller invested in this listing. Contains `amountDistributed` (kobo), `sweepEventId`, `investmentId`, `squadTransferReference`. `null` otherwise. |
+| Field          | Type           | Notes                                                                                                                                                                                                    |
+| -------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `distribution` | object \| null | Present only if the caller invested in this listing. Contains `amountDistributed` (kobo, after 1% platform fee is deducted), `sweepEventId`, `investmentId`, `squadTransferReference`. `null` otherwise. |
 
 \---
 
@@ -770,6 +770,7 @@ Preview terms before committing. Does not create anything.
 | Field                   | Type   | Notes                                                         |
 | ----------------------- | ------ | ------------------------------------------------------------- |
 | `capitalRequested`      | number | In kobo                                                       |
+| `totalDisbursed`        | number | total after default pool is subtracted, In kobo               |
 | `totalReturnPercent`    | number | Total return charged to the business                          |
 | `totalReturnAmount`     | number | `capitalRequested × (1 + totalReturnPercent/100)`, in kobo    |
 | `revenueSharePercent`   | number | Percent swept from each incoming payment                      |
@@ -843,6 +844,48 @@ The actual cap is also bounded by a revenue multiple: **1.5× average monthly re
 \---
 
 ## Screen 9 — Payments
+
+### GET /business/:userId/balance
+
+**Auth:** JWT  
+**Path params:** `userId` — business user UUID
+
+**Response 200:**
+
+| Field     | Type   | Notes                                     |
+| --------- | ------ | ----------------------------------------- |
+| `balance` | number | Available internal ledger balance in kobo |
+
+\---
+
+### POST /business/:userId/simulate-revenue
+
+**Auth:** JWT (business)  
+**Path params:** `userId` — business user UUID
+
+Simulates real-world revenue by automatically depositing 5% of the business's average monthly revenue into their virtual account every 10 seconds for 1 minute (6 deposits total). This is extremely useful for demonstrating the sweep mechanics in real-time.
+
+**Response 201:**
+
+```json
+{
+  "message": "Revenue simulation started",
+  "deposits": 6,
+  "intervalSeconds": 10,
+  "amountPerDeposit": 25000
+}
+```
+
+**Errors:**
+
+| Status | Meaning                                           |
+| ------ | ------------------------------------------------- |
+| 400    | Business has no recorded revenue to simulate from |
+| 401    | Missing or invalid token                          |
+| 403    | Caller is not a business account                  |
+| 404    | Profile or virtual account not found              |
+
+\---
 
 ### GET /business/:userId/payment-link
 
@@ -956,50 +999,18 @@ Pays off the entire remaining balance in one transfer. Any locked tranches are r
 > Amounts are in kobo and sent as strings.
 > The server generates a unique `transactionReference` prefixed with the merchant ID `SB3YYHDENW\_`.
 
-### POST /payouts/account-lookup
-
-Verify the recipient bank account name before initiating a payout.
-
-**Auth:** JWT
-
-**Request body:**
-
-| Field           | Type   | Required | Notes                        |
-| --------------- | ------ | -------- | ---------------------------- |
-| `bankCode`      | string | yes      | NIP bank code, e.g. `000013` |
-| `accountNumber` | string | yes      | 10-digit NUBAN               |
-
-**Response 200:**
-
-| Field           | Type   | Notes                 |
-| --------------- | ------ | --------------------- |
-| `bankCode`      | string |                       |
-| `accountNumber` | string |                       |
-| `accountName`   | string | Verified account name |
-
-**Errors:**
-
-| Status | Meaning                  |
-| ------ | ------------------------ |
-| 401    | Missing or invalid token |
-
-\---
-
 ### POST /payouts/transfer
 
-Initiate a payout to a bank account.
+Initiate a payout to the user's registered bank account (beneficiary account).
+The backend will automatically look up the user's account name from Squad before transferring.
 
 **Auth:** JWT
 
 **Request body:**
 
-| Field           | Type   | Required | Notes                           |
-| --------------- | ------ | -------- | ------------------------------- |
-| `amount`        | string | yes      | Amount in kobo (e.g. `"10000"`) |
-| `bankCode`      | string | yes      | NIP bank code                   |
-| `accountNumber` | string | yes      | 10-digit NUBAN                  |
-| `accountName`   | string | yes      | From account lookup             |
-| `remark`        | string | yes      | Transaction note                |
+| Field    | Type   | Required | Notes                           |
+| -------- | ------ | -------- | ------------------------------- |
+| `amount` | string | yes      | Amount in kobo (e.g. `"10000"`) |
 
 **Response 201:**
 
@@ -1295,7 +1306,7 @@ All fields optional. Send only the fields to update.
 | `listingId`               | UUID                    |                                                                  |
 | `investorId`              | UUID                    | Investor profile UUID                                            |
 | `amountCommitted`         | number                  | In kobo                                                          |
-| `defaultPoolContribution` | number                  | 4% of `amountCommitted`, in kobo                                 |
+| `defaultPoolContribution` | number                  | 4% of `amountCommitted`, in kobo. Held in platform safety net.   |
 | `sharePercent`            | string                  | Investor's share of the listing's total capital, e.g. `"9.6000"` |
 | `totalReturnDue`          | number                  | Total return owed to this investor, in kobo                      |
 | `totalReturnReceived`     | number                  | Return received so far, in kobo                                  |
