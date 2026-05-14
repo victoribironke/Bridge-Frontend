@@ -97,6 +97,15 @@ export const useRepayMutation = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["business-active-listing"] });
       queryClient.invalidateQueries({ queryKey: ["business-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["business-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["business-rating"] });
+      queryClient.invalidateQueries({ queryKey: ["business-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["business-activity"] });
+      queryClient.invalidateQueries({ queryKey: ["business-revenue-chart"] });
+      queryClient.invalidateQueries({ queryKey: ["business-sweep-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["business-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
+      queryClient.invalidateQueries({ queryKey: ["listing"] });
     },
   });
 };
