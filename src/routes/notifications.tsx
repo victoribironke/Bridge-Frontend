@@ -6,6 +6,7 @@ import {
   useMarkAllNotificationsReadMutation,
 } from "@/hooks/mutations";
 import { useAuth } from "@/lib/auth";
+import { formatActivityTimestamp } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
 const Notifications = () => {
@@ -67,7 +68,7 @@ const Notifications = () => {
                       {n.title}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {new Date(n.createdAt).toLocaleDateString()}
+                      {formatActivityTimestamp(n.createdAt)}
                     </span>
                   </div>
                   <p className="mt-0.5 text-sm text-muted-foreground">{n.detail}</p>
