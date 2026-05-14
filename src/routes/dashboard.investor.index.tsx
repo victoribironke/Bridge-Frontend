@@ -8,7 +8,7 @@ import {
   useListings,
 } from "@/hooks/queries";
 import { useProtectedRoute } from "@/hooks/use-protected-route";
-import { formatNaira } from "@/lib/utils";
+import { formatNaira, formatActivityTimestamp } from "@/lib/utils";
 import { PAGES, SECTORS } from "@/lib/constants";
 import { Loader2 } from "lucide-react";
 
@@ -22,7 +22,7 @@ const InvestorDashboard = () => {
     <div className="mx-auto max-w-6xl px-6 py-10">
       <h1 className="font-display text-3xl">Welcome back</h1>
 
-      <section className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+      <section className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3">
         {isSummaryLoading || !summary ? (
           <div className="col-span-full flex justify-center py-6">
             <Loader2 className="animate-spin text-primary" />
@@ -31,17 +31,17 @@ const InvestorDashboard = () => {
           [
             {
               label: "Capital deployed",
-              value: formatNaira(summary.totalDeployedKobo),
+              value: formatNaira(summary.totalCapitalDeployed),
             },
             {
               label: "Returns received",
-              value: formatNaira(summary.totalReturnsReceivedKobo),
+              value: formatNaira(summary.totalReturnsReceived),
             },
             { label: "Active deals", value: String(summary.activeDealsCount) },
-            {
-              label: "Default pool balance",
-              value: formatNaira(summary.defaultPoolBalanceKobo),
-            },
+            // {
+            //   label: "Default pool balance",
+            //   value: formatNaira(summary.defaultPoolBalanceKobo),
+            // },
           ].map((s) => (
             <div key={s.label} className="rounded-2xl border border-border bg-card p-5">
               <div className="font-display text-2xl">{s.value}</div>
@@ -72,8 +72,8 @@ const InvestorDashboard = () => {
                   <div className="font-medium">{a.title}</div>
                   <div className="text-muted-foreground">{a.detail}</div>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(a.createdAt).toLocaleDateString()}
+                <span className="shrink-0 text-right text-xs text-muted-foreground">
+                  {formatActivityTimestamp(a.createdAt)}
                 </span>
               </li>
             ))}
