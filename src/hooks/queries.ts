@@ -200,6 +200,21 @@ export const useBusinessSweepSummary = () => {
   });
 };
 
+export type BusinessBalanceResponse = {
+  balance: number;
+};
+
+/** GET /business/:userId/balance — internal ledger balance in kobo */
+export const useBusinessBalance = () => {
+  const userId = useUserId();
+  return useQuery({
+    queryKey: ["business-balance", userId],
+    queryFn: () => apiFetch<BusinessBalanceResponse>(`/business/${userId}/balance`),
+    enabled: !!userId,
+    staleTime: DASHBOARD_STALE_TIME,
+  });
+};
+
 export const usePayouts = (page = 1, perPage = 10) => {
   return useQuery({
     queryKey: ["payouts", page, perPage],
