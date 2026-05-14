@@ -102,7 +102,7 @@ const Payments = () => {
     if (!link) return;
 
     if (navigator.share)
-      await navigator.share({ title: "Pay me on Bridge", url: link }).catch(() => {});
+      await navigator.share({ title: "Pay me on Bridge", url: link }).catch(() => { });
     else copy();
   };
 
@@ -183,7 +183,7 @@ const Payments = () => {
                   onSuccess: (data) => {
                     toast.success(
                       data.message ||
-                        `Simulation started (${data.deposits} deposits every ${data.intervalSeconds}s).`,
+                      `Simulation started (${data.deposits} deposits every ${data.intervalSeconds}s).`,
                     );
                     startInflowPoll();
                   },
@@ -303,6 +303,7 @@ const Payments = () => {
                   <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
                     <th className="py-2">Date</th>
                     <th>Incoming</th>
+                    <th>Service Fee</th>
                     <th>Sweep</th>
                     <th>Net</th>
                     <th>Status</th>
@@ -323,6 +324,7 @@ const Payments = () => {
                       <tr key={p.id}>
                         <td className="py-3">{formatActivityTimestamp(processedAt)}</td>
                         <td>{incoming != null ? formatNairaFull(incoming) : "—"}</td>
+                        <td>{p.serviceFee != null ? p.serviceFee : 0}</td>
                         <td>{sweepApplied ? formatNairaFull(sweep) : "—"}</td>
                         <td className="font-medium">{formatNairaFull(net)}</td>
                         <td>
