@@ -65,12 +65,22 @@ const BusinessDashboard = () => {
   }
 
   const handleRepay = (listingId: string) => {
+    const loadingToastId = toast.loading("Processing full repayment…");
     repayMut.mutate(listingId, {
-      onSuccess: () => {
-        toast.success("Listing fully repaid!");
+      onSuccess: (data) => {
+        toast.dismiss(loadingToastId);
+        const msg =
+          data && typeof data === "object" && typeof (data as any).message === "string"
+            ? (data as any).message
+            : "Listing fully repaid!";
+        toast.success(msg);
+        setConfirmRepay(false);
       },
-      onError: (err: any) => {
-        toast.error(err.message || "Failed to repay listing.");
+      onError: (err: unknown) => {
+        toast.dismiss(loadingToastId);
+        const message = err instanceof Error ? err.message : "Failed to repay listing.";
+        toast.error(message);
+        setConfirmRepay(false);
       },
     });
   };
@@ -201,7 +211,20 @@ const BusinessDashboard = () => {
               </div>
             </div>
           ) : (
-            <div className="mt-4">
+            <div className="relative mt-4 min-h-[120px]">
+              {repayMut.isPending && (
+                <div
+                  className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-background/85 px-4 py-8 text-center backdrop-blur-sm"
+                  aria-busy="true"
+                  aria-live="polite"
+                >
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm font-medium text-foreground">Processing full repayment…</p>
+                  <p className="max-w-xs text-xs text-muted-foreground">
+                    Sweeping balance and closing the deal. This may take a few seconds.
+                  </p>
+                </div>
+              )}
               <div className="font-display text-lg">
                 {activeListing.aiProfile?.narrative?.[0] || activeListing.useOfFunds}
               </div>
@@ -242,8 +265,10 @@ const BusinessDashboard = () => {
                   </p>
                   {!confirmRepay ? (
                     <button
+                      type="button"
+                      disabled={repayMut.isPending}
                       onClick={() => setConfirmRepay(true)}
-                      className="inline-flex items-center gap-2 rounded-md border border-destructive/40 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10"
+                      className="inline-flex items-center gap-2 rounded-md border border-destructive/40 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:pointer-events-none disabled:opacity-50"
                     >
                       <AlertTriangle className="h-4 w-4" />
                       Make Full Repayment
@@ -251,17 +276,17 @@ const BusinessDashboard = () => {
                   ) : (
                     <div className="flex items-center gap-2">
                       <button
+                        type="button"
+                        disabled={repayMut.isPending}
                         onClick={() => setConfirmRepay(false)}
-                        className="rounded-md border border-input px-3 py-2 text-sm hover:bg-secondary"
+                        className="rounded-md border border-input px-3 py-2 text-sm hover:bg-secondary disabled:pointer-events-none disabled:opacity-50"
                       >
                         Cancel
                       </button>
                       <button
+                        type="button"
                         disabled={repayMut.isPending}
-                        onClick={() => {
-                          handleRepay(activeListing.id);
-                          setConfirmRepay(false);
-                        }}
+                        onClick={() => handleRepay(activeListing.id)}
                         className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
                       >
                         {repayMut.isPending ? (
