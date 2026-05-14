@@ -232,22 +232,51 @@ export const useNotifications = () => {
   });
 };
 
-export const useBusinessRevenueChart = (period: string, year?: number, month?: number) => {
+export type BusinessRevenuePeriod = "hourly" | "daily" | "monthly" | "yearly";
+
+export type BusinessRevenueRow = {
+  label: string;
+  totalIncoming: number;
+  totalSwept: number;
+  totalRetained: number;
+};
+
+export type BusinessRevenueResponse = {
+  period: BusinessRevenuePeriod;
+  year: number | null;
+  month: number | null;
+  day?: number | null;
+  data: BusinessRevenueRow[];
+};
+
+/** GET /business/:userId/revenue — kobo. `daily`: year+month; `hourly`: year+month+day; `monthly`: year. */
+export const useBusinessRevenueChart = (
+  period: BusinessRevenuePeriod,
+  year?: number,
+  month?: number,
+  day?: number,
+) => {
   const userId = useUserId();
+  const paramsReady =
+    period === "yearly" ||
+    (period === "monthly" && year != null) ||
+    (period === "daily" && year != null && month != null) ||
+    (period === "hourly" && year != null && month != null && day != null);
+
+  const params: Record<string, string | number> = { period };
+  if (period !== "yearly" && year != null) params.year = year;
+  if ((period === "daily" || period === "hourly") && month != null) params.month = month;
+  if (period === "hourly" && day != null) params.day = day;
+
   return useQuery({
-    queryKey: ["business-revenue-chart", userId, period, year, month],
-    queryFn: () => {
-      const params = new URLSearchParams();
-      params.append("period", period);
-      if (year) params.append("year", year.toString());
-      if (month) params.append("month", month.toString());
-      return apiFetch<any>(`/business/${userId}/revenue?${params.toString()}`);
-    },
-    enabled: !!userId,
+    queryKey: ["business-revenue-chart", userId, period, year, month, day],
+    queryFn: () => apiFetch<BusinessRevenueResponse>(`/business/${userId}/revenue`, { params }),
+    enabled: !!userId && paramsReady,
+    staleTime: DASHBOARD_STALE_TIME,
   });
 };
 
-export type InvestorReturnsPeriod = "daily" | "monthly" | "yearly";
+export type InvestorReturnsPeriod = "hourly" | "daily" | "monthly" | "yearly";
 
 export type InvestorReturnsRow = {
   label: string;
@@ -259,28 +288,32 @@ export type InvestorReturnsResponse = {
   period: InvestorReturnsPeriod;
   year: number | null;
   month: number | null;
+  day?: number | null;
   data: InvestorReturnsRow[];
 };
 
-/** GET /investor/:userId/returns — amounts in kobo; `year`/`month` rules match backend validation. */
+/** GET /investor/:userId/returns — kobo. `daily`: year+month; `hourly`: year+month+day; `monthly`: year. */
 export const useInvestorPerformanceChart = (
   period: InvestorReturnsPeriod,
   year?: number,
   month?: number,
+  day?: number,
 ) => {
   const userId = useUserId();
 
   const paramsReady =
     period === "yearly" ||
     (period === "monthly" && year != null) ||
-    (period === "daily" && year != null && month != null);
+    (period === "daily" && year != null && month != null) ||
+    (period === "hourly" && year != null && month != null && day != null);
 
   const params: Record<string, string | number> = { period };
   if (period !== "yearly" && year != null) params.year = year;
-  if (period === "daily" && month != null) params.month = month;
+  if ((period === "daily" || period === "hourly") && month != null) params.month = month;
+  if (period === "hourly" && day != null) params.day = day;
 
   return useQuery({
-    queryKey: ["investor-performance-chart", userId, period, year, month],
+    queryKey: ["investor-performance-chart", userId, period, year, month, day],
     queryFn: () => apiFetch<InvestorReturnsResponse>(`/investor/${userId}/returns`, { params }),
     enabled: !!userId && paramsReady,
     staleTime: DASHBOARD_STALE_TIME,
