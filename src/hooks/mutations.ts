@@ -247,7 +247,7 @@ export const useDepositMutation = () => {
   });
 };
 
-/** POST /investor/:userId/checkout — returns Squad checkout URL (wallet top-up). */
+/** POST /investor/:userId/checkout — session for Squad widget (token/key, transaction_ref) or checkout_url fallback. */
 export const useInvestorWalletCheckoutMutation = () => {
   const { token } = useAuth();
 
