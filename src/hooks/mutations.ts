@@ -101,6 +101,42 @@ export const useRepayMutation = () => {
   });
 };
 
+/** POST /business/:userId/simulate-revenue — sandbox revenue deposits for demo sweeps */
+export const useSimulateRevenueMutation = () => {
+  const queryClient = useQueryClient();
+  const { token } = useAuth();
+
+  const getUserId = () => {
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      return payload.sub || payload.id || null;
+    } catch {
+      return null;
+    }
+  };
+
+  return useMutation({
+    mutationFn: () => {
+      const userId = getUserId();
+      if (!userId) throw new Error("Not authenticated");
+      return apiFetch<{
+        message: string;
+        deposits: number;
+        intervalSeconds: number;
+        amountPerDeposit: number;
+      }>(`/business/${userId}/simulate-revenue`, { method: "POST" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["business-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["business-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["business-sweep-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["business-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["business-active-listing"] });
+    },
+  });
+};
+
 export const usePayoutAccountLookupMutation = () => {
   return useMutation({
     mutationFn: (data: { bankCode: string; accountNumber: string }) =>
