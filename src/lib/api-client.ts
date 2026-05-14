@@ -74,8 +74,12 @@ export const apiFetch = async <T>(endpoint: string, options: FetchOptions = {}):
   const response = await fetch(url, config);
 
   if (!response.ok) {
-    // On 401, clear stored auth to force re-login
-    if (response.status === 401 && typeof window !== "undefined") {
+    // On 401, clear stored auth to force re-login (but not for failed login attempts)
+    if (
+      response.status === 401 &&
+      typeof window !== "undefined" &&
+      !endpoint.includes("/auth/login")
+    ) {
       window.localStorage.removeItem("bridge.auth");
     }
 
