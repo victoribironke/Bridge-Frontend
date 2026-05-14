@@ -51,10 +51,10 @@ const Portfolio = () => {
   const defaultedDeals = deals.filter((d: any) => d.status === "defaulted");
 
   const overallRoi =
-    summary?.totalDeployedKobo > 0
-      ? ((summary.totalReturnsReceivedKobo - summary.totalDeployedKobo) /
-          summary.totalDeployedKobo) *
-        100
+    summary?.totalCapitalDeployed > 0
+      ? ((summary.totalReturnsReceived - summary.totalCapitalDeployed) /
+        summary.totalCapitalDeployed) *
+      100
       : 0;
 
   return (
@@ -68,10 +68,10 @@ const Portfolio = () => {
           </div>
         ) : (
           <>
-            <Stat label="Capital deployed" value={formatNaira(summary?.totalDeployedKobo || 0)} />
+            <Stat label="Capital deployed" value={formatNairaFull(summary?.totalCapitalDeployed || 0)} />
             <Stat
               label="Returns received"
-              value={formatNaira(summary?.totalReturnsReceivedKobo || 0)}
+              value={formatNairaFull(summary?.totalReturnsReceived || 0)}
             />
             <Stat label="Completed" value={String(completedDeals.length)} />
             <Stat label="Funding" value={String(inactiveDeals.length)} />
