@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { AuthProvider, useAuth, type UserType } from "@/lib/auth";
 import { PAGES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { Toaster } from "sonner";
 
 const NotFoundComponent = () => {
   return (
@@ -102,6 +103,7 @@ const SiteChrome = () => {
         <Outlet />
       </main>
       <Footer />
+      <Toaster richColors closeButton position="top-center" />
     </div>
   );
 };
