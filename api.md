@@ -43,7 +43,7 @@ Validation errors from class-validator return `message` as an array of strings, 
 
 ### `investmentStatus`
 
-`"active"` | `"completed"` | `"defaulted"`
+`"inactive"` | `"active"` | `"completed"` | `"defaulted"`
 
 ### `trancheStatus`
 
@@ -190,6 +190,31 @@ Any integer from `1` to `24`. Tier 1 businesses are additionally capped at 18 mo
 | 403    | Caller is not an investor account                                                                       |
 | 404    | Listing not found                                                                                       |
 | 502    | Squad escrow transfer failed                                                                            |
+
+\---
+
+### DELETE /investments/:id
+
+**Auth:** JWT (investor)  
+**Path params:** `id` — investment UUID
+
+Cancels an existing investment and fully refunds the committed capital to the investor's wallet. This is only possible if the listing is still in the `active` (funding) state and the investment status is `inactive`. Once a listing is fully funded, investments cannot be cancelled.
+
+**Response 200:**
+
+| Field     | Type   | Notes                                      |
+| --------- | ------ | ------------------------------------------ |
+| `success` | `true` |                                            |
+| `message` | string | e.g. `"Investment cancelled and refunded"` |
+
+**Errors:**
+
+| Status | Meaning                                                    |
+| ------ | ---------------------------------------------------------- |
+| 400    | Investment is already `active` or `completed`              |
+| 401    | Missing or invalid token                                   |
+| 403    | Caller is not an investor, or does not own this investment |
+| 404    | Investment not found                                       |
 
 \---
 
@@ -632,9 +657,9 @@ Sandbox only: simulates an incoming bank deposit to the investor's Squad virtual
 
 **Response 200:** Array of sweep events. Each item extends [Sweep Event object](#sweep-event-object) with one extra field:
 
-| Field          | Type           | Notes                                                                                                                                                                                                    |
-| -------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `distribution` | object \| null | Present only if the caller invested in this listing. Contains `amountDistributed` (kobo, after 1% platform fee is deducted), `sweepEventId`, `investmentId`, `squadTransferReference`. `null` otherwise. |
+| Field          | Type           | Notes                                                                                                                                                                                                         |
+| -------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `distribution` | object \| null | Present only if the caller invested in this listing. Contains `amountDistributed` (kobo, their full share of the debt repayment), `sweepEventId`, `investmentId`, `squadTransferReference`. `null` otherwise. |
 
 \---
 
@@ -931,11 +956,12 @@ Simulates real-world revenue by automatically depositing 5% of the business's av
 **Path params:** `userId` — business user UUID  
 **Query params:**
 
-| Param    | Type   | Required                           | Notes                                  |
-| -------- | ------ | ---------------------------------- | -------------------------------------- |
-| `period` | string | yes                                | `"daily"` \| `"monthly"` \| `"yearly"` |
-| `year`   | number | required for `daily` and `monthly` | e.g. `2025`                            |
-| `month`  | number | required for `daily`               | `1`–`12`                               |
+| Param    | Type   | Required                                  | Notes                                                |
+| -------- | ------ | ----------------------------------------- | ---------------------------------------------------- |
+| `period` | string | yes                                       | `"hourly"` \| `"daily"` \| `"monthly"` \| `"yearly"` |
+| `year`   | number | required for `hourly`, `daily`, `monthly` | e.g. `2025`                                          |
+| `month`  | number | required for `hourly`, `daily`            | `1`–`12`                                             |
+| `day`    | number | required for `hourly`                     | `1`–`31`                                             |
 
 **Response 200:**
 
@@ -1310,7 +1336,8 @@ All fields optional. Send only the fields to update.
 | `sharePercent`            | string                  | Investor's share of the listing's total capital, e.g. `"9.6000"` |
 | `totalReturnDue`          | number                  | Total return owed to this investor, in kobo                      |
 | `totalReturnReceived`     | number                  | Return received so far, in kobo                                  |
-| `status`                  | `investmentStatus` enum |                                                                  |
+| `targetRepaymentMonths`   | number                  | Target months to full repayment                                  |
+| `status`                  | `investmentStatus` enum | `"inactive"` (pre-funding) \| `"active"` (repayment in progress) |
 | `squadTransferReference`  | string \| null          |                                                                  |
 | `createdAt`               | ISO datetime            |                                                                  |
 | `updatedAt`               | ISO datetime            |                                                                  |
@@ -1319,16 +1346,16 @@ All fields optional. Send only the fields to update.
 
 ### Sweep Event object
 
-| Field                   | Type         | Notes                                    |
-| ----------------------- | ------------ | ---------------------------------------- |
-| `id`                    | UUID         |                                          |
-| `listingId`             | UUID         |                                          |
-| `incomingPaymentAmount` | number       | Full payment received, in kobo           |
-| `sweepPercent`          | string       | e.g. `"8.50"`                            |
-| `sweepAmount`           | number       | Amount swept to investors, in kobo       |
-| `netAmountRetained`     | number       | Amount retained by the business, in kobo |
-| `squadWebhookReference` | string       |                                          |
-| `processedAt`           | ISO datetime |                                          |
+| Field                   | Type         | Notes                                                                                              |
+| ----------------------- | ------------ | -------------------------------------------------------------------------------------------------- |
+| `id`                    | UUID         |                                                                                                    |
+| `listingId`             | UUID         |                                                                                                    |
+| `incomingPaymentAmount` | number       | Full payment received, in kobo                                                                     |
+| `sweepPercent`          | string       | e.g. `"8.50"`                                                                                      |
+| `sweepAmount`           | number       | Amount swept to investors, in kobo                                                                 |
+| `netAmountRetained`     | number       | Amount retained by the business after the 1% platform fee and investor sweep are deducted, in kobo |
+| `squadWebhookReference` | string       |                                                                                                    |
+| `processedAt`           | ISO datetime |                                                                                                    |
 
 \---
 
