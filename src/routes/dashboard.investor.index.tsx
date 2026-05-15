@@ -295,6 +295,7 @@ const Card = ({ l }: { l: any }) => {
     l.generatedProfile ||
     (typeof l.aiProfile === "object" && l.aiProfile?.narrative?.[0]) ||
     l.useOfFunds ||
+    l.expectedImpact ||
     "";
 
   return (
