@@ -292,7 +292,10 @@ const Card = ({ l }: { l: any }) => {
   const standing = l.bridge_ratings?.standing || l.bridge_ratings?.overallStanding || "Seed";
   const businessName = l.business_profiles?.businessName || "Business";
   const narrative =
-    (typeof l.aiProfile === "object" && l.aiProfile?.narrative?.[0]) || l.useOfFunds || "";
+    l.generatedProfile ||
+    (typeof l.aiProfile === "object" && l.aiProfile?.narrative?.[0]) ||
+    l.useOfFunds ||
+    "";
 
   return (
     <Link
