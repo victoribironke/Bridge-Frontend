@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -104,4 +106,49 @@ export const formatChartAxisLabel = (label: string, period: ChartAxisPeriod): st
     if (!Number.isNaN(h)) return `${h}:00`;
   }
   return t;
+};
+
+export const getTrancheDisplay = (listing: any, aiProfile: any) => {
+  if (Array.isArray(listing.tranches) && listing.tranches.length > 0) {
+    return listing.tranches.map((tranche: any) => ({
+      label: `Tranche ${tranche.trancheNumber}`,
+      amount: tranche.amount,
+      condition: tranche.releaseCondition,
+      released: tranche.status === "released" || !!tranche.releasedAt,
+    }));
+  }
+
+  return aiProfile?.tranches || [];
+};
+
+export const parseAiProfile = (aiProfile: any) => {
+  if (!aiProfile) return null;
+
+  if (typeof aiProfile === "object") return aiProfile;
+
+  if (typeof aiProfile === "string") {
+    try {
+      return JSON.parse(aiProfile);
+    } catch (e) {
+      return { narrative: aiProfile };
+    }
+  }
+
+  return null;
+};
+
+export const normalizeListingResponse = (response: any) => {
+  if (!response) return null;
+
+  if (response.listings) {
+    return {
+      ...response.listings,
+      business_profiles: response.business_profiles,
+      bridge_ratings: response.bridge_ratings,
+      tranches: response.tranches,
+      businessSquadVirtualAccountNumber: response.businessSquadVirtualAccountNumber,
+    };
+  }
+
+  return response;
 };
