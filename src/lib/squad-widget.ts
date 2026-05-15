@@ -168,6 +168,7 @@ export const openInvestorSquadWalletCheckout = async (
     currency_code: "NGN",
     transaction_ref: transactionRef,
     callback_url: callbackUrl,
+    payment_channels: ["card", "bank", "ussd", "transfer"],
     onClose,
     onSuccess,
   });
