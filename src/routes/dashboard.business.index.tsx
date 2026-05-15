@@ -17,6 +17,9 @@ import {
   formatNairaFull,
   formatActivityTimestamp,
   formatChartAxisLabel,
+  normalizeListingResponse,
+  getTrancheDisplay,
+  parseAiProfile,
 } from "@/lib/utils";
 import { BUSINESS_DASHBOARD_SNAPSHOT_KEY, PAGES } from "@/lib/constants";
 import { useRepayMutation, usePayoutTransferMutation } from "@/hooks/mutations";
@@ -35,6 +38,15 @@ const BusinessDashboard = () => {
   const businessProfile = (profileData as any)?.business_profiles || {};
   const businessProfileId = businessProfile.id as string | undefined;
   const { data: ratingData, isLoading: isRatingLoading } = useBusinessRating(businessProfileId);
+
+  let tranches = [];
+
+  if (activeListing) {
+    const listing = normalizeListingResponse(activeListing);
+
+    const aiProfile = parseAiProfile(listing?.aiProfile);
+    tranches = getTrancheDisplay(listing, aiProfile);
+  }
 
   const [confirmRepay, setConfirmRepay] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -257,6 +269,33 @@ const BusinessDashboard = () => {
                   </div>
                 ))}
               </div>
+
+              <div>
+                <div className="text-sm font-medium">Tranche structure</div>
+                <ol className="mt-3 space-y-3">
+                  {tranches.map((t: any) => (
+                    <li
+                      key={t.label}
+                      className="flex items-start justify-between rounded-lg border border-border p-4"
+                    >
+                      <div>
+                        <div className="font-medium">
+                          {t.label} · {formatNaira(t.amount)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{t.condition}</div>
+                      </div>
+                      <span
+                        className={
+                          "text-xs " + (t.released ? "text-success" : "text-muted-foreground")
+                        }
+                      >
+                        {t.released ? "Released" : "Locked"}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
               {activeListing.status === "funded" && (
                 <div className="mt-5 border-t border-border pt-4 flex items-center justify-between">
                   <p className="text-xs text-muted-foreground max-w-sm">
