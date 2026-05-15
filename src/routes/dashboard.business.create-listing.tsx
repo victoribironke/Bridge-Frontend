@@ -204,7 +204,7 @@ const CreateListing = () => {
               <>
                 <span />
                 <PrimaryBtn
-                  disabled={!capitalValid || useFunds.length < 80 || impact.length < 80}
+                  disabled={!capitalValid || !useFunds || !impact}
                   onClick={() => setStep(1)}
                 >
                   Continue
@@ -259,7 +259,8 @@ const CreateListing = () => {
                 </div>
               </div>
             </Field>
-            <Field label="Use of funds" hint={`${useFunds.length}/80 minimum — be specific.`}>
+            <Field label="Use of funds">
+              {/* <Field label="Use of funds" hint={`${useFunds.length}/80 minimum — be specific.`}> */}
               <Textarea
                 rows={4}
                 value={useFunds}
@@ -267,7 +268,8 @@ const CreateListing = () => {
                 placeholder="What exactly will this capital be used for?"
               />
             </Field>
-            <Field label="Expected impact" hint={`${impact.length}/80 minimum`}>
+            <Field label="Expected impact">
+              {/* <Field label="Expected impact" hint={`${impact.length}/80 minimum`}> */}
               <Textarea
                 rows={4}
                 value={impact}
