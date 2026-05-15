@@ -3,43 +3,17 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useListingDetail } from "@/hooks/queries";
 import { useInvestMutation } from "@/hooks/mutations";
-import { formatNairaFull, formatNaira } from "@/lib/utils";
+import {
+  formatNairaFull,
+  formatNaira,
+  getTrancheDisplay,
+  parseAiProfile,
+  normalizeListingResponse,
+} from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { PAGES } from "@/lib/constants";
 import { Loader2, Banknote, Target } from "lucide-react";
 import { toast } from "sonner";
-
-const normalizeListingResponse = (response: any) => {
-  if (!response) return null;
-
-  if (response.listings) {
-    return {
-      ...response.listings,
-      business_profiles: response.business_profiles,
-      bridge_ratings: response.bridge_ratings,
-      tranches: response.tranches,
-      businessSquadVirtualAccountNumber: response.businessSquadVirtualAccountNumber,
-    };
-  }
-
-  return response;
-};
-
-const parseAiProfile = (aiProfile: any) => {
-  if (!aiProfile) return null;
-
-  if (typeof aiProfile === "object") return aiProfile;
-
-  if (typeof aiProfile === "string") {
-    try {
-      return JSON.parse(aiProfile);
-    } catch (e) {
-      return { narrative: aiProfile };
-    }
-  }
-
-  return null;
-};
 
 const toParagraphs = (value: any) => {
   if (Array.isArray(value)) return value.filter(Boolean);
@@ -65,19 +39,6 @@ const getRatingBreakdown = (rating: any) => {
     { label: "CAC bonus", contribution: Number(rating.cacBonusScore || 0) },
     { label: "Communication", contribution: Number(rating.communicationScore || 0) },
   ].filter((component) => component.contribution > 0);
-};
-
-const getTrancheDisplay = (listing: any, aiProfile: any) => {
-  if (Array.isArray(listing.tranches) && listing.tranches.length > 0) {
-    return listing.tranches.map((tranche: any) => ({
-      label: `Tranche ${tranche.trancheNumber}`,
-      amount: tranche.amount,
-      condition: tranche.releaseCondition,
-      released: tranche.status === "released" || !!tranche.releasedAt,
-    }));
-  }
-
-  return aiProfile?.tranches || [];
 };
 
 const getTrustSignals = (listing: any, aiProfile: any) => {
@@ -180,12 +141,12 @@ const ListingDetailPage = () => {
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
-      <Link
+      {/* <Link
         to={PAGES.DASHBOARD_INVESTOR}
         className="text-sm text-muted-foreground hover:text-foreground"
       >
         ← Back to listings
-      </Link>
+      </Link> */}
 
       <header className="mt-6 rounded-3xl border border-border bg-card p-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
