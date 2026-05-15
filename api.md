@@ -792,7 +792,7 @@ See [Business Profile object](#business-profile-object), [User object](#user-obj
 **Auth:** JWT  
 **Path params:** `userId` — business user UUID
 
-**Response 200:** A [Listing object](#listing-object) if the business has an active or funded listing, or `null` if none exists.
+**Response 200:** A [Listing object](#listing-object) (with `tranches` included) if the business has an active or funded listing, or `null` if none exists.
 
 \---
 
@@ -1305,10 +1305,12 @@ All fields optional. Send only the fields to update.
 | `totalReturnPercent`    | string               | e.g. `"24.50"`                             |
 | `targetRepaymentMonths` | number               |                                            |
 | `aiProfile`             | string               | AI-generated investor narrative            |
+| `generatedProfile`      | string               | Short AI-generated 2-sentence summary      |
 | `status`                | `listingStatus` enum |                                            |
 | `totalCommitted`        | number               | Investor capital committed so far, in kobo |
 | `totalSwept`            | number               | In kobo                                    |
 | `investorCount`         | number               |                                            |
+| `tranches`              | Tranche\[] \| null   | Included in the `active-listing` response  |
 | `createdAt`             | ISO datetime         |                                            |
 | `updatedAt`             | ISO datetime         |                                            |
 
